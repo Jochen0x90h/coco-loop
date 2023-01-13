@@ -25,7 +25,9 @@ class Project(ConanFile):
         "platform": None}
     generators = "CMakeDeps"
     exports_sources = "conanfile.py", "CMakeLists.txt", "coco/*", "test/*"
-    requires = "coco/0.1.0", "coco-devboards/0.1.0"
+    requires = [
+        "coco/0.3.0",
+        "coco-devboards/0.2.0"]
 
 
     # check if we are cross compiling
@@ -86,7 +88,7 @@ class Project(ConanFile):
         cmake.install()
 
     def package_info(self):
-        self.cpp_info.libs = ["coco-loop"]
+        self.cpp_info.libs = [self.name]
 
     def deploy(self):
         # install if CONAN_INSTALL_PREFIX env variable is set

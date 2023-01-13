@@ -1,14 +1,14 @@
-build*/
-cmake-build*/
-__pycache__*/
+build/
+__pycache__/
+presets.py
 CMakeUserPresets.json
-imgui.ini
 
 # VSCode
 .vscode/
 
 # CLion
 .idea/
+cmake-build*/
 
 # QtCreator
 CMakeLists.txt.user

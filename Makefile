@@ -6,7 +6,7 @@ NAME := $(shell python3 -c 'from conanfile import Project; print(Project.name)')
 # version (from git branch or tag)
 left := (
 right := )
-BRANCH := $(shell git tag -l --points-at HEAD)
+BRANCH := $(shell git diff-index --quiet HEAD && git tag --points-at HEAD)
 ifeq ($(BRANCH),)
 	BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 endif
@@ -18,10 +18,10 @@ REFERENCE := $(NAME)/$(VERSION)@
 # options
 export CONAN_RUN_TESTS=1
 export CONAN_INSTALL_PREFIX=${HOME}/.local
-RELEASE := -pr default -b missing
-DEBUG := -pr debug -b missing
-ARMV7 := -pr:b default -pr:h armv7
-ARMV6 := -pr:b default -pr:h armv6
+RELEASE := -pr default -b missing -b $(REFERENCE)
+DEBUG := -pr debug -b missing -b $(REFERENCE)
+ARMV7 := -pr:b default -pr:h armv7 -b missing -b $(REFERENCE)
+ARMV6 := -pr:b default -pr:h armv6 -b missing -b $(REFERENCE)
 
 
 # default target

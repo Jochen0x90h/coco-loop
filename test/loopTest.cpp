@@ -4,9 +4,6 @@
 
 using namespace coco;
 
-/*extern "C" {
-	void SystemInit() {}
-}*/
 
 Coroutine timer1() {
 	while (true) {
@@ -33,6 +30,9 @@ Coroutine timer2() {
 Coroutine timer3() {
 	while (true) {
 		debug::toggleBlue();
+		
+		// test yield
+		co_await loop::yield();
 
 		// test if time overflow works on nrf52
 		auto time = loop::now();
@@ -43,7 +43,6 @@ Coroutine timer3() {
 }
 
 int main() {
-	loop::init();
 	debug::init();
 
 	timer1();
