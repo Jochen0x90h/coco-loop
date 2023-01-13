@@ -4,10 +4,6 @@
 namespace coco {
 namespace loop {
 
-void init() {
-	initTimer();
-}
-
 void run() {
 	while (true) {
 		handleEvents();

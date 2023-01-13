@@ -8,14 +8,14 @@ namespace coco {
 namespace loop {
 
 /**
- * Initialize the event loop
- */
-void init();
-
-/**
  * Run the event loop
  */
 void run();
+
+/**
+ * Yield control to other coroutines. Can be used to do longer processing in a cooperative way.
+ */
+[[nodiscard]] Awaitable<> yield();
 
 /**
  * Get current time in milliseconds
