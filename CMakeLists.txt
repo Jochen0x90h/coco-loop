@@ -3,10 +3,6 @@ cmake_minimum_required(VERSION 3.19)
 # set project
 project(coco-loop)
 
-#set(CMAKE_VERBOSE_MAKEFILE ON)
-set(VERBOSE 1)
-#set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "ON")
-
 # configure languages
 enable_language(CXX)
 set(CMAKE_CXX_STANDARD 20)
@@ -34,6 +30,7 @@ message("*** Crosscompiling: ${CMAKE_CROSSCOMPILING}")
 #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
 
 # platform dependent configuration
+message("*** OS: ${OS}")
 message("*** Platform: ${PLATFORM}")
 if(${PLATFORM} STREQUAL "native")
 	set(SERIES native)

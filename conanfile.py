@@ -26,8 +26,9 @@ class Project(ConanFile):
     generators = "CMakeDeps"
     exports_sources = "conanfile.py", "CMakeLists.txt", "coco/*", "test/*"
     requires = [
-        "coco/0.3.0",
-        "coco-devboards/0.2.0"]
+        "coco/0.4.0",
+        "coco-devboards/0.3.0"
+    ]
 
 
     # check if we are cross compiling
@@ -50,6 +51,7 @@ class Project(ConanFile):
     def generate(self):
         # generate "conan_toolchain.cmake"
         toolchain = CMakeToolchain(self)
+        toolchain.variables["OS"] = self.settings.os
         toolchain.variables["PLATFORM"] = self.options.platform
 
         # cross compile to a platform if platform option is set
@@ -89,6 +91,8 @@ class Project(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = [self.name]
+        if self.settings.os == "Windows":
+            self.cpp_info.system_libs = ["winmm"]
 
     def deploy(self):
         # install if CONAN_INSTALL_PREFIX env variable is set
