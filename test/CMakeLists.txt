@@ -10,35 +10,43 @@ macro(generate_hex TARGET)
 	endif()
 endmacro()
 
-# generate loopTest for every board
-foreach(BOARD ${coco-devboards_COMPONENT_NAMES})
-	string(REGEX REPLACE ".*\\:" "loopTest-" NAME ${BOARD})
-	add_executable(${NAME}
-		loopTest.cpp
-	)
-	target_include_directories(${NAME}
-		PRIVATE
-			../
-	)
 
-	# find link.ld of board
-	get_target_property(INCLUDES ${BOARD} INTERFACE_INCLUDE_DIRECTORIES)
-	target_link_directories(${NAME}
-		PRIVATE	
-			${INCLUDES}
-	)
+# iterate over boards and generate tests
+foreach(COMPONENT ${coco-devboards_COMPONENT_NAMES})
+	string(REGEX REPLACE ".*\\:" "" BOARD ${COMPONENT})
+	message("*** Boad: ${BOARD}")
+	
+	# check if board specific header exists
+	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${BOARD}/LoopTest.hpp)
+		set(NAME "LoopTest-${BOARD}")
+		add_executable(${NAME}
+			LoopTest.cpp
+		)
+		target_include_directories(${NAME}
+			PRIVATE
+				../
+				${BOARD}
+		)
 
-	target_link_libraries(${NAME}
-		coco::coco
-		${BOARD}
-		${PROJECT_NAME}
-	)
+		# find link.ld of board
+		get_target_property(INCLUDES ${COMPONENT} INTERFACE_INCLUDE_DIRECTORIES)
+		target_link_directories(${NAME}
+			PRIVATE	
+				${INCLUDES}
+		)
 
-	# windows specific libraries
-	if(WIN32)
-		target_link_libraries(${NAME} wsock32 ws2_32 winmm)
+		target_link_libraries(${NAME}
+			coco::coco
+			${COMPONENT}
+			${PROJECT_NAME}
+		)
+
+		# windows specific libraries
+		if(${OS} STREQUAL "Windows")
+			target_link_libraries(${NAME} winmm)
+		endif()
+
+		# generate hex file for flashing the target
+		generate_hex(${NAME})
 	endif()
-
-	# generate hex file for flashing the target
-	generate_hex(${NAME})
 endforeach()
