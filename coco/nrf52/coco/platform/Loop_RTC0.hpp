@@ -1,31 +1,43 @@
 #pragma once
 
 #include <coco/Loop.hpp>
-#include "Handler.hpp"
+#include <coco/LinkedList.hpp>
 
 
 namespace coco {
 
 /*
- * Implementation of the Loop interface using RTC0
- * https://infocenter.nordicsemi.com/topic/struct_nrf52/struct/nrf52840.html
- *
- * Resources:
- *	NRF_RTC0
- *		CC[0]
- */
+	Implementation of the Loop interface using RTC0
+
+	Reference manual:
+		https://infocenter.nordicsemi.com/topic/struct_nrf52/struct/nrf52840.html
+
+	Resources:
+		NRF_RTC0
+			CC[0]
+*/
 class Loop_RTC0 : public Loop {
 public:
 
 	Loop_RTC0() = default;
 	~Loop_RTC0() override;
 
-	void run() override;
+	void run(const int &condition) override;
+	using Loop::run;
 	[[nodiscard]] Awaitable<> yield() override;
-	[[nodiscard]] Time virtual now() override;
-	[[nodiscard]] virtual Awaitable<Time> sleep(Time time) override;
+	[[nodiscard]] Time now() override;
+	[[nodiscard]] Awaitable<Time> sleep(Time time) override;
 
-	HandlerList handlers;
+
+	/**
+		Event handler that handles activity of the peripherals
+	*/
+	class Handler : public LinkedListNode {
+	public:
+		virtual ~Handler();
+		virtual void handle() = 0;
+	};
+	LinkedList<Handler> handlers;
 
 protected:
 
@@ -33,10 +45,10 @@ protected:
 	uint32_t baseTime = 0;
 
 	// coroutines waiting on yield()
-	Waitlist<> yieldWaitlist;
+	TaskList<> yieldTaskList;
 
 	// coroutines waiting on sleep()
-	Waitlist<Time> sleepWaitlist;
+	TaskList<Time> sleepTaskList;
 };
 
 } // namespace coco

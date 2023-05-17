@@ -11,29 +11,30 @@ constexpr int INTERVAL = 1024000;
 Loop_RTC0::~Loop_RTC0() {
 }
 
-void Loop_RTC0::run() {
-	while (true) {
+void Loop_RTC0::run(const int &condition) {
+	int c = condition;
+	while (c == condition) {
 		// resume coroutines waiting on yield()
-		this->yieldWaitlist.resumeAll();
+		this->yieldTaskList.resumeAll();
 
 		// resume coroutines waiting on sleep()
 		// todo: keep sleepWaitlist in sorted order as optimization
 		Time currentTime = now();
-		this->sleepWaitlist.resumeAll([currentTime](Time time) {
+		this->sleepTaskList.resumeAll([currentTime](Time time) {
 			// check if this time has elapsed
 			return time <= currentTime;
 		});
 
 		// get sleep time
 		Time sleepTime = {currentTime.value + INTERVAL - 1};
-		this->sleepWaitlist.visitAll([&sleepTime](Time time) {
+		this->sleepTaskList.visitAll([&sleepTime](Time time) {
 			// check if this time is the next to elapse
 			if (time < sleepTime)
 				sleepTime = time;
 		});
 
 		// only sleep if there are no coroutines waiting on yield()
-		if (this->yieldWaitlist.empty()) {
+		if (this->yieldTaskList.empty()) {
 			// set new timeout and clear pending interrupt flags at peripheral and NVIC
 			NRF_RTC0->CC[0] = ((sleepTime.value - this->baseTime) << (7 + 4)) / 125;
 			NRF_RTC0->EVENTS_COMPARE[0] = 0;
@@ -46,7 +47,7 @@ void Loop_RTC0::run() {
 
 				// data synchronization barrier
 				__DSB();
-			
+
 				// wait for event (interrupts trigger an event due to SEVONPEND)
 				__WFE();
 			}
@@ -64,7 +65,7 @@ void Loop_RTC0::run() {
 }
 
 Awaitable<> Loop_RTC0::yield() {
-	return {this->yieldWaitlist};
+	return {this->yieldTaskList};
 }
 
 Time Loop_RTC0::now() {
@@ -84,7 +85,7 @@ Time Loop_RTC0::now() {
 
 Awaitable<Time> Loop_RTC0::sleep(Time time) {
 	// todo: insert into waitlist in sorted order
-	return {this->sleepWaitlist, time};
+	return {this->sleepTaskList, time};
 }
 /*
 void sleepBlocking(int us) {
@@ -93,5 +94,11 @@ void sleepBlocking(int us) {
 		__NOP();
 	}
 }*/
+
+
+// Loop_RTC0
+
+Loop_RTC0::Handler::~Handler() {
+}
 
 } // namespace coco

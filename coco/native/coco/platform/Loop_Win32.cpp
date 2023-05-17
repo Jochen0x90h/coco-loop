@@ -16,21 +16,21 @@ Loop_Win32::Loop_Win32() {
 		auto e = GetLastError();
 		std::cout << "CreateIoCompletionPort: " << e << std::endl;
 	}
-
 }
 
 Loop_Win32::~Loop_Win32() {
 	CloseHandle(this->port);
 }
 
-void Loop_Win32::run() {
-	while (true) {
+void Loop_Win32::run(const int &condition) {
+	int c = condition;
+	while (c == condition) {
 		handleEvents();
 	}
 }
 
 Awaitable<> Loop_Win32::yield() {
-	return {this->yieldWaitlist};
+	return {this->yieldTaskList};
 }
 
 Time Loop_Win32::now() {
@@ -38,13 +38,13 @@ Time Loop_Win32::now() {
 }
 
 Awaitable<Time> Loop_Win32::sleep(Time time) {
-	return {this->sleepWaitlist, time};
+	return {this->sleepTaskList, time};
 }
 
 bool Loop_Win32::handleEvents(int wait) {
 	// resume coroutines waiting on yield() and activate yield handlers
 	{
-		this->yieldWaitlist.resumeAll();
+		this->yieldTaskList.resumeAll();
 
 		auto it = this->yieldHandlers.begin();
 		while (it != this->yieldHandlers.end()) {
@@ -59,7 +59,7 @@ bool Loop_Win32::handleEvents(int wait) {
 	// resume coroutines waiting on sleep() and activate time handlers
 	// todo: keep sleepWaitlist in sorted order as optimization
 	Time currentTime = now();
-	this->sleepWaitlist.resumeAll([currentTime](Time time) {
+	this->sleepTaskList.resumeAll([currentTime](Time time) {
 		// check if this time has elapsed
 		return time <= currentTime;
 	});
@@ -72,13 +72,13 @@ bool Loop_Win32::handleEvents(int wait) {
 		if (handler.time <= currentTime)
 			handler.handle();
 	}
-	
+
 	// determine timeout
 	int timeout = 0;
-	if (this->yieldWaitlist.empty() && this->yieldHandlers.empty()) {
+	if (this->yieldTaskList.empty() && this->yieldHandlers.empty()) {
 		// get sleep time
 		Time sleepTime = {currentTime.value + wait};
-		this->sleepWaitlist.visitAll([&sleepTime](Time time) {
+		this->sleepTaskList.visitAll([&sleepTime](Time time) {
 			// check if this time is the next to elapse
 			if (time < sleepTime)
 				sleepTime = time;
@@ -118,6 +118,25 @@ bool Loop_Win32::handleEvents(int wait) {
 			std::cout << "GetQueuedCompletionStatusEx: " << e << std::endl;
 		return false;
 	}
+
+}
+
+
+// Loop_Win32::YieldHandler
+
+Loop_Win32::YieldHandler::~YieldHandler() {
+}
+
+
+// Loop_Win32::TimeHandler
+
+Loop_Win32::TimeHandler::~TimeHandler() {
+}
+
+
+// Loop_Win32::CompletionHandler
+
+Loop_Win32::CompletionHandler::~CompletionHandler() {
 }
 
 } // namespace coco

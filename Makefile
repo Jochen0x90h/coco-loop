@@ -18,29 +18,36 @@ REFERENCE := $(NAME)/$(VERSION)@
 # options
 export CONAN_RUN_TESTS=1
 export CONAN_INSTALL_PREFIX=${HOME}/.local
-RELEASE := -pr default -b missing -b $(REFERENCE)
-DEBUG := -pr debug -b missing -b $(REFERENCE)
-ARMV7 := -pr:b default -pr:h armv7 -b missing -b $(REFERENCE)
+RELEASE := -pr:b default -pr:h default -b missing -b $(REFERENCE)
+DEBUG := -pr:b debug -pr:h debug -b missing -b $(REFERENCE)
 ARMV6 := -pr:b default -pr:h armv6 -b missing -b $(REFERENCE)
+ARMV7 := -pr:b default -pr:h armv7 -b missing -b $(REFERENCE)
 
 
 # default target
-all: release debug armv7 armv6
+all: native emu nrf52 stm32f0
 
-release:
-	conan create $(RELEASE) . $(REFERENCE)
-	conan create $(RELEASE) -o platform=native . $(REFERENCE)
+#debug:
+#	conan create $(DEBUG) . $(REFERENCE)
 
-debug:
-	conan create $(DEBUG) . $(REFERENCE)
+#default:
+#	conan create $(RELEASE) . $(REFERENCE)
+
+native:
 	conan create $(DEBUG) -o platform=native . $(REFERENCE)
+#	conan create $(RELEASE) -o platform=native . $(REFERENCE)
 
-armv7:
+emu:
+	conan create $(DEBUG) -o platform=emu . $(REFERENCE)
+#	conan create $(RELEASE) -o platform=emu . $(REFERENCE)
+
+nrf52:
 	conan create $(ARMV7) -o platform=nrf52840 . $(REFERENCE)
 
-armv6:
-	conan create $(ARMV6) -o platform=stm32f042x6 . $(REFERENCE)
+stm32f0:
+#	conan create $(ARMV6) -o platform=stm32f042x6 . $(REFERENCE)
 	conan create $(ARMV6) -o platform=stm32f051x8 . $(REFERENCE)
+
 
 # install (e.g. to ~/.local)
 install:
