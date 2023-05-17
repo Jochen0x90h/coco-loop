@@ -31,7 +31,7 @@ Coroutine timer2(Loop &loop) {
 Coroutine timer3(Loop &loop) {
 	while (true) {
 		debug::toggleBlue();
-		
+
 		// test yield
 		co_await loop.yield();
 
@@ -43,13 +43,36 @@ Coroutine timer3(Loop &loop) {
 	}
 }
 
+
+int i1;
+int i2() {return i1;}
+int &i3() {return i1;}
+const int &i4() {return i1;}
+
+enum class Foo {BAR};
+Foo f1;
+Foo f2() {return f1;}
+Foo &f3() {return f1;}
+const Foo &f4() {return f1;}
+
 int main() {
-	Drivers drivers;
 	debug::init();
+	Drivers drivers;
 
 	timer1(drivers.loop);
 	timer2(drivers.loop);
 	timer3(drivers.loop);
 
 	drivers.loop.run();
+
+	// compilation checks for Loop::run(condition)
+	drivers.loop.run(i1);
+	//drivers.loop.run(i2()); // should not compile for r-value
+	drivers.loop.run(i3());
+	drivers.loop.run(i4());
+
+	drivers.loop.run(f1);
+	//drivers.loop.run(f2()); // should not compile for r-value
+	drivers.loop.run(f3());
+	drivers.loop.run(f4());
 }

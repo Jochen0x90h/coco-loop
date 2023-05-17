@@ -14,8 +14,8 @@ endmacro()
 # iterate over boards and generate tests
 foreach(COMPONENT ${coco-devboards_COMPONENT_NAMES})
 	string(REGEX REPLACE ".*\\:" "" BOARD ${COMPONENT})
-	message("*** Boad: ${BOARD}")
-	
+	message("*** Board: ${BOARD}")
+
 	# check if board specific header exists
 	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${BOARD}/LoopTest.hpp)
 		set(NAME "LoopTest-${BOARD}")
@@ -31,7 +31,7 @@ foreach(COMPONENT ${coco-devboards_COMPONENT_NAMES})
 		# find link.ld of board
 		get_target_property(INCLUDES ${COMPONENT} INTERFACE_INCLUDE_DIRECTORIES)
 		target_link_directories(${NAME}
-			PRIVATE	
+			PRIVATE
 				${INCLUDES}
 		)
 
@@ -42,7 +42,7 @@ foreach(COMPONENT ${coco-devboards_COMPONENT_NAMES})
 		)
 
 		# windows specific libraries
-		if(${OS} STREQUAL "Windows")
+		if(WIN32)
 			target_link_libraries(${NAME} winmm)
 		endif()
 
