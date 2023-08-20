@@ -41,11 +41,6 @@ foreach(COMPONENT ${coco-devboards_COMPONENT_NAMES})
 			${PROJECT_NAME}
 		)
 
-		# windows specific libraries
-		if(WIN32)
-			target_link_libraries(${NAME} winmm)
-		endif()
-
 		# generate hex file for flashing the target
 		generate_hex(${NAME})
 	endif()

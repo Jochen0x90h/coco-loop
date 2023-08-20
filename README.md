@@ -11,6 +11,7 @@ Add coco-loop/\<version> to your conanfile where version corresponds to the git 
 * Time with millisecond resolution
 * Sleep and yeld methods
 * Lets the CPU sleep until an event occurs
+* Simple user interface for emulating hardware (leds, displays, buttons)
 
 Uses WFE instruction on ARM. Note the wake-up time of microcontrollers of about 10μs
 

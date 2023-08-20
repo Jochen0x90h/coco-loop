@@ -28,6 +28,14 @@ if(${PLATFORM} STREQUAL "native" OR ${PLATFORM} STREQUAL "emu")
 		# epoll
 	endif()
 
+	# native
+	if(${PLATFORM} STREQUAL "native")
+		target_sources(${PROJECT_NAME}
+			PRIVATE
+				native/coco/platform/debug.cpp
+		)
+	endif()
+
 	# graphical emulator
 	if(${PLATFORM} STREQUAL "emu")
 		target_sources(${PROJECT_NAME}
@@ -38,6 +46,7 @@ if(${PLATFORM} STREQUAL "native" OR ${PLATFORM} STREQUAL "emu")
 				emu/coco/platform/glad/glad.h
 				emu/coco/platform/glad/khrplatform.h
 			PRIVATE
+				emu/coco/platform/debug.cpp
 				emu/coco/platform/Gui.cpp
 				emu/coco/platform/Loop_emu.cpp
 				emu/coco/platform/Newline_emu.cpp
@@ -55,14 +64,14 @@ elseif(${PLATFORM} MATCHES "^nrf52")
 		PRIVATE
 			nrf52/coco/platform/Loop_RTC0.cpp
 	)
-elseif (${PLATFORM} MATCHES "^stm32f0")
+elseif(${PLATFORM} MATCHES "^stm32f0" OR ${PLATFORM} MATCHES "^stm32g4")
 	target_sources(${PROJECT_NAME}
 		PUBLIC FILE_SET platform_headers TYPE HEADERS BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/stm32f0 FILES
 			stm32f0/coco/platform/Loop_TIM2.hpp
 		PRIVATE
 			stm32f0/coco/platform/Loop_TIM2.cpp
 	)
-endif ()
+endif()
 
 target_include_directories(${PROJECT_NAME}
 	PRIVATE

@@ -6,6 +6,14 @@
 namespace coco {
 
 Loop_Win32::Loop_Win32() {
+	// get frequency of QueryPerformanceCounter()
+	// https://learn.microsoft.com/en-us/windows/win32/sysinfo/acquiring-high-resolution-time-stamps
+	// http://www.geisswerks.com/ryan/FAQS/timing.html
+	LARGE_INTEGER frequency;
+	QueryPerformanceFrequency(&frequency);
+	this->frequency = frequency.QuadPart / 1000;
+
+	// create io completion port
 	this->port = CreateIoCompletionPort(
 		INVALID_HANDLE_VALUE, // FileHandle,
 		nullptr, // ExistingCompletionPort,
@@ -29,74 +37,35 @@ void Loop_Win32::run(const int &condition) {
 	}
 }
 
-Awaitable<> Loop_Win32::yield() {
-	return {this->yieldTaskList};
-}
+//Awaitable<> Loop_Win32::yield() {
+//	return {this->yieldTasks2};
+//}
 
 Time Loop_Win32::now() {
-	return {timeGetTime()};
+	// todo: handle overflow
+	LARGE_INTEGER time;
+	QueryPerformanceCounter(&time);
+	return {uint32_t(time.QuadPart / this->frequency)};
 }
 
-Awaitable<Time> Loop_Win32::sleep(Time time) {
-	return {this->sleepTaskList, time};
+Awaitable<CoroutineTimedTask> Loop_Win32::sleep(Time time) {
+	return {this->sleepTasks2, time};
 }
 
 bool Loop_Win32::handleEvents(int wait) {
-	// resume coroutines waiting on yield() and activate yield handlers
-	{
-		this->yieldTaskList.resumeAll();
-
-		auto it = this->yieldHandlers.begin();
-		while (it != this->yieldHandlers.end()) {
-			// increment iterator beforehand because a yield handler can remove() itself
-			auto &handler = *it;
-			++it;
-
-			handler.handle();
-		}
-	}
-
-	// resume coroutines waiting on sleep() and activate time handlers
-	// todo: keep sleepWaitlist in sorted order as optimization
-	Time currentTime = now();
-	this->sleepTaskList.resumeAll([currentTime](Time time) {
-		// check if this time has elapsed
-		return time <= currentTime;
-	});
-	auto it = this->timeHandlers.begin();
-	while (it != this->timeHandlers.end()) {
-		// increment iterator beforehand because a time handler can remove() itself
-		auto &handler = *it;
-		++it;
-
-		if (handler.time <= currentTime)
-			handler.handle();
-	}
-
-	// determine timeout
+	// determine timeout, only sleep if there are no coroutines waiting on yield()
 	int timeout = 0;
-	if (this->yieldTaskList.empty() && this->yieldHandlers.empty()) {
-		// get sleep time
-		Time sleepTime = {currentTime.value + wait};
-		this->sleepTaskList.visitAll([&sleepTime](Time time) {
-			// check if this time is the next to elapse
-			if (time < sleepTime)
-				sleepTime = time;
-		});
-		for (auto &handler : this->timeHandlers) {
-			if (handler.time < sleepTime)
-				sleepTime = handler.time;
-			++it;
-		}
-
-		int t = (sleepTime - now()).value;
+	/*if (this->yieldTasks1.empty() && this->yieldTasks2.empty())*/ {
+		Time currentTime = now();
+		Time sleepTime = this->sleepTasks2.getFirstTime(this->sleepTasks1.getFirstTime(currentTime + wait * 1ms));
+		int t = (sleepTime - currentTime).value;
 		timeout = t > 0 ? t : 0;
 	}
 
 	// wait for io completion
 	ULONG entryCount;
 	OVERLAPPED_ENTRY entries[16];
-	auto result = GetQueuedCompletionStatusEx(
+	bool result = GetQueuedCompletionStatusEx(
 		this->port,
 		entries,
 		std::size(entries),
@@ -110,27 +79,25 @@ bool Loop_Win32::handleEvents(int wait) {
 			auto handler = (CompletionHandler *)(entry.lpCompletionKey);
 			handler->handle(entry.lpOverlapped);
 		}
-		return true;
 	} else {
 		// timeout
 		auto e = GetLastError();
 		if (e != WAIT_TIMEOUT)
 			std::cout << "GetQueuedCompletionStatusEx: " << e << std::endl;
-		return false;
 	}
 
-}
+	// resume coroutines waiting on yield() and activate yield handlers
+	//this->yieldTasks1.doAll();
+	//this->yieldTasks2.doAll();
 
+	// resume coroutines waiting on sleep() and activate time handlers
+	{
+		Time currentTime = now();
+		this->sleepTasks1.doUntil(currentTime);
+		this->sleepTasks2.doUntil(currentTime);
+	}
 
-// Loop_Win32::YieldHandler
-
-Loop_Win32::YieldHandler::~YieldHandler() {
-}
-
-
-// Loop_Win32::TimeHandler
-
-Loop_Win32::TimeHandler::~TimeHandler() {
+	return result;
 }
 
 

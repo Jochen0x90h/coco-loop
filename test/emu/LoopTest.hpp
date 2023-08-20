@@ -3,7 +3,10 @@
 #include <coco/platform/Loop_emu.hpp>
 
 
+using namespace coco;
+
+
 // drivers for LoopTest
 struct Drivers {
-	coco::Loop_emu loop;
+	Loop_emu loop;
 };
