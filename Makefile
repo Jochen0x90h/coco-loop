@@ -25,7 +25,10 @@ ARMV7 := -pr:b default -pr:h armv7 -b missing -b $(REFERENCE)
 
 
 # default target
-all: native emu nrf52 stm32f0
+all: remove native emu nrf52 stm32f0 stm32g4
+
+remove:
+	- conan remove $(REFERENCE) --packages --force
 
 #debug:
 #	conan create $(DEBUG) . $(REFERENCE)
@@ -47,6 +50,10 @@ nrf52:
 stm32f0:
 #	conan create $(ARMV6) -o platform=stm32f042x6 . $(REFERENCE)
 	conan create $(ARMV6) -o platform=stm32f051x8 . $(REFERENCE)
+
+stm32g4:
+	conan create $(ARMV7) -o platform=stm32g431xx . $(REFERENCE)
+#	conan create $(ARMV7) -o platform=stm32g474xx . $(REFERENCE)
 
 
 # install (e.g. to ~/.local)

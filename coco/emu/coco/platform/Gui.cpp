@@ -14,7 +14,7 @@ static GLuint createShader(GLenum type, char const *code) {
 	glShaderSource(shader, 1, &code, nullptr);
 	glCompileShader(shader);
 
-	// check status
+	// check compile status
 	GLint success;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 	if (!success) {
@@ -157,6 +157,21 @@ Gui::Renderer::Renderer(char const *fragmentShaderSource) {
 	glAttachShader(this->program, vertexShader);
 	glAttachShader(this->program, fragmentShader);
 	glLinkProgram(this->program);
+
+	// check link status
+	GLint success;
+	glGetProgramiv(program, GL_LINK_STATUS, &success);
+	if (!success) {
+		// get length of log (including trailing null character)
+		GLint length;
+		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
+
+		// get log
+		std::vector<char> errorLog(length);
+		glGetProgramInfoLog(program, length, &length, (GLchar*)errorLog.data());
+
+		throw std::runtime_error(errorLog.data());
+	}
 
 	// get uniform locations
 	this->matLocation = getUniformLocation("mat");

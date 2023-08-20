@@ -32,18 +32,19 @@ Coroutine timer3(Loop &loop) {
 	while (true) {
 		debug::toggleBlue();
 
-		// test yield
-		co_await loop.yield();
-
 		// test if time overflow works on nrf52
 		auto time = loop.now();
 		int i = int(time.value >> 20) & 3;
 
 		co_await loop.sleep(500ms + i * 1s);
+
+		// test yield
+		co_await loop.yield();
 	}
 }
 
 
+// compilation checks for Loop::run(condition)
 int i1;
 int i2() {return i1;}
 int &i3() {return i1;}
@@ -55,8 +56,8 @@ Foo f2() {return f1;}
 Foo &f3() {return f1;}
 const Foo &f4() {return f1;}
 
+
 int main() {
-	debug::init();
 	Drivers drivers;
 
 	timer1(drivers.loop);

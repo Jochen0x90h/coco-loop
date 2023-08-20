@@ -1,10 +1,12 @@
 #pragma once
 
 #include <coco/Loop.hpp>
-#include <coco/LinkedList.hpp>
+#include <coco/Callback.hpp>
+//#include <coco/LinkedList.hpp>
 #include <coco/Time.hpp>
 
 #define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
 #include "Windows.h"
 #undef interface
 #undef INTERFACE
@@ -27,32 +29,26 @@ public:
 
 	void run(const int &condition) override;
 	using Loop::run;
-	[[nodiscard]] Awaitable<> yield() override;
+	//[[nodiscard]] Awaitable<> yield() override;
 	[[nodiscard]] Time now() override;
-	[[nodiscard]] Awaitable<Time> sleep(Time time) override;
+	[[nodiscard]] Awaitable<CoroutineTimedTask> sleep(Time time) override;
 
 
-	/**
-		Yield handler used to execute something from the event loop
-	*/
-	class YieldHandler : public LinkedListNode {
-	public:
-		virtual ~YieldHandler();
-		virtual void handle() = 0;
-	};
-	LinkedList<YieldHandler> yieldHandlers;
+	void invoke(TimedTask<Callback> &task, Time time) {
+		task.cancelAndSet(time);
+		this->sleepTasks1.add(task);
+	}
 
-	/**
-		Time handler used for delayed execution
-	*/
-	class TimeHandler : public LinkedListNode {
-	public:
-		virtual ~TimeHandler();
-		virtual void handle() = 0;
+	void invoke(TimedTask<Callback> &task, Duration duration) {
+		task.cancelAndSet(now() + duration);
+		this->sleepTasks1.add(task);
+	}
 
-		Time time;
-	};
-	LinkedList<TimeHandler> timeHandlers;
+	void invoke(TimedTask<Callback> &task) {
+		task.cancelAndSet(now());
+		this->sleepTasks1.add(task);
+	}
+
 
 	/**
 		IO Completion handler
@@ -70,12 +66,16 @@ public:
 	HANDLE port;
 
 protected:
+	// frequency for QueryPerformanceCounter
+	int64_t frequency;
 
-	// coroutines waiting on yield()
-	TaskList<> yieldTaskList;
+	// yield tasks
+	//TaskList<Task<Callback>> yieldTasks1;
+	//CoroutineTaskList<> yieldTasks2;
 
-	// coroutines waiting on sleep()
-	TaskList<Time> sleepTaskList;
+	// sleep tasks
+	TimedTaskList<Callback> sleepTasks1;
+	CoroutineTimedTaskList sleepTasks2;
 };
 
 } // namespace coco

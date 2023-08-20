@@ -8,7 +8,7 @@ namespace coco {
 
 class Loop {
 public:
-	virtual ~Loop();
+	virtual ~Loop() {}
 
 	/**
 		Run the event loop until exit() gets called
@@ -47,11 +47,6 @@ public:
 	void exit() {--this->recursion;}
 
 	/**
-		Yield control to other coroutines. Can be used to do longer processing in a cooperative way.
-	*/
-	[[nodiscard]] virtual Awaitable<> yield() = 0;
-
-	/**
 		Get current time in milliseconds
 		@return current time
 	*/
@@ -61,13 +56,18 @@ public:
 		Suspend execution using co_await until a given time. Only up to TIMER_COUNT coroutines can wait simultaneously.
 		@param time time point
 	*/
-	[[nodiscard]] virtual Awaitable<Time> sleep(Time time) = 0;
+	[[nodiscard]] virtual Awaitable<CoroutineTimedTask>/*Awaitable<Time>*/ sleep(Time time) = 0;
 
 	/**
 		Suspend execution using co_await for a given duration. Only up to TIMER_COUNT coroutines can wait simultaneously.
 		@param duration duration
 	*/
-	[[nodiscard]] Awaitable<Time> sleep(Duration duration) {return sleep(now() + duration);}
+	[[nodiscard]] Awaitable<CoroutineTimedTask> sleep(Duration duration) {return sleep(now() + duration);}
+
+	/**
+		Yield control to other coroutines. Can be used to do longer processing in a cooperative way.
+	*/
+	[[nodiscard]] virtual Awaitable<CoroutineTimedTask> yield() {return sleep(now());}
 
 
 	int recursion = 0;

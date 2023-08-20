@@ -3,7 +3,10 @@
 #include <coco/platform/Loop_RTC0.hpp>
 
 
+using namespace coco;
+
+
 // drivers for LoopTest
 struct Drivers {
-	coco::Loop_RTC0 loop;
+	Loop_RTC0 loop;
 };
