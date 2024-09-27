@@ -10,3 +10,5 @@ using namespace coco;
 struct Drivers {
 	Loop_native loop;
 };
+
+Drivers drivers;

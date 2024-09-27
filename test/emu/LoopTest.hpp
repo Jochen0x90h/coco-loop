@@ -10,3 +10,5 @@ using namespace coco;
 struct Drivers {
 	Loop_emu loop;
 };
+
+Drivers drivers;

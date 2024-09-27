@@ -16,17 +16,16 @@ public:
 	Loop_emu();
 	~Loop_emu() override;
 
-	void run(const int &condition) override;
-	using Loop::run;
+	void run() override;
 
 
-	class GuiHandler : public LinkedListNode {
+	class GuiHandler : public IntrusiveListNode {
 	public:
 		virtual ~GuiHandler();
 		virtual void handle(Gui &gui) = 0;
 	};
 
-	LinkedList<GuiHandler> guiHandlers;
+	IntrusiveList<GuiHandler> guiHandlers;
 
 protected:
 

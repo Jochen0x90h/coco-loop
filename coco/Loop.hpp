@@ -6,71 +6,51 @@
 
 namespace coco {
 
+/**
+ * Main event loop. Subclasses implement the event loop for different target platforms
+ */
 class Loop {
 public:
-	virtual ~Loop() {}
+    using Duration = Milliseconds<>;
+    using Time = TimeMilliseconds<>;
 
-	/**
-		Run the event loop until exit() gets called
-	*/
-	void run() {
-		++this->recursion;
-		run(this->recursion);
-	}
+    virtual ~Loop() {}
 
-	/**
-		Run the event loop until a condition variable changes. Use for example in startup code when reading from files
-		or SPI to avoid coroutines. Use with care as other asynchronous events are still handled.
-		@param condition condition variable
-	*/
-	virtual void run(const int &condition) = 0;
-	void run(int &condition) {run(const_cast<const int &>(condition));}
+    /**
+     * Run the event loop until exit() gets called
+     */
+    virtual void run() = 0;
 
-	/**
-		Run the event loop until a condition variable changes that is an enum with underlying type of int
-		@param condition condition variable
-	*/
-	template <typename E>
-	void run(const E &condition) {run(reinterpret_cast<const std::underlying_type_t<E> &>(condition));}
-	template <typename E>
-	void run(E &condition) {run(reinterpret_cast<const std::underlying_type_t<E> &>(condition));}
+    /**
+     * Exit the event loop on "normal" operating systems
+     */
+    void exit() {this->exitFlag = true;}
 
-	/**
-		Do not accept r-value references for run(condition)
-	*/
-	template <typename T>
-	void run(T &&condition) = delete;
+    /**
+     * Get current time in milliseconds
+     * @return current time
+     */
+    [[nodiscard]] Time virtual now() = 0;
 
-	/**
-		Exit the event loop on "normal" operating systems
-	*/
-	void exit() {--this->recursion;}
+    /**
+     * Suspend execution using co_await until a given time. Only up to TIMER_COUNT coroutines can wait simultaneously.
+     * @param time time point
+     */
+    [[nodiscard]] virtual Awaitable<CoroutineTimedTask> sleep(Time time) = 0;
 
-	/**
-		Get current time in milliseconds
-		@return current time
-	*/
-	[[nodiscard]] Time virtual now() = 0;
+    /**
+     * Suspend execution using co_await for a given duration. Only up to TIMER_COUNT coroutines can wait simultaneously.
+     * @param duration duration
+     */
+    [[nodiscard]] Awaitable<CoroutineTimedTask> sleep(Duration duration) {return sleep(now() + duration);}
 
-	/**
-		Suspend execution using co_await until a given time. Only up to TIMER_COUNT coroutines can wait simultaneously.
-		@param time time point
-	*/
-	[[nodiscard]] virtual Awaitable<CoroutineTimedTask>/*Awaitable<Time>*/ sleep(Time time) = 0;
-
-	/**
-		Suspend execution using co_await for a given duration. Only up to TIMER_COUNT coroutines can wait simultaneously.
-		@param duration duration
-	*/
-	[[nodiscard]] Awaitable<CoroutineTimedTask> sleep(Duration duration) {return sleep(now() + duration);}
-
-	/**
-		Yield control to other coroutines. Can be used to do longer processing in a cooperative way.
-	*/
-	[[nodiscard]] virtual Awaitable<CoroutineTimedTask> yield() {return sleep(now());}
+    /**
+     * Yield control to other coroutines. Can be used to do longer processing in a cooperative way.
+     */
+    [[nodiscard]] virtual Awaitable<CoroutineTimedTask> yield() {return sleep(now());}
 
 
-	int recursion = 0;
+    bool exitFlag = false;
 };
 
 } // namespace coco

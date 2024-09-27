@@ -9,7 +9,7 @@ using namespace coco;
 
 // drivers for LoopTest
 struct Drivers {
-	Loop_TIM2 loop{APB1_TIMER_CLOCK, Loop_TIM2::Mode::POLL};
+	Loop_TIM2 loop{APB1_TIMER_CLOCK};
 };
 
 Drivers drivers;

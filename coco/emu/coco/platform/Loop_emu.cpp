@@ -1,7 +1,9 @@
 #include "Loop_emu.hpp"
 #include "Gui.hpp"
+#include "GuiLed.hpp"
 #include <iterator>
 #include <iostream>
+#include "font/tahoma16pt8bpp.hpp"
 
 
 namespace coco {
@@ -89,10 +91,9 @@ Loop_emu::~Loop_emu() {
 	glfwDestroyWindow(this->window);
 }
 
-void Loop_emu::run(const int &condition) {
-	int c = condition;
+void Loop_emu::run() {
 	Gui gui;
-	while (c == condition && !glfwWindowShouldClose(this->window)) {
+	while (!this->exitFlag && !glfwWindowShouldClose(this->window)) {
 		//auto frameStart = std::chrono::steady_clock::now();
 
 		// process events
@@ -114,7 +115,7 @@ void Loop_emu::run(const int &condition) {
 		auto it = this->guiHandlers.begin();
 		while (it != this->guiHandlers.end()) {
 
-			// increment iterator beforehand because a yield handler can remove() itself
+			// increment iterator beforehand because a handler can remove() itself
 			auto &handler = *it;
 			++it;
 
@@ -124,10 +125,12 @@ void Loop_emu::run(const int &condition) {
 		// debug LEDs
 		gui.newline();
 		const int off = 0x202020;
-		gui.draw<Led>(debug::red ? 0x0000ff : off);
-		gui.draw<Led>(debug::green ? 0x00ff00 : off);
-		gui.draw<Led>(debug::blue ? 0xff0000 : off);
-		gui.draw<Led>((debug::red ? 0x0000ff : 0) | (debug::green ? 0x00ff00 : 0) | (debug::blue ? 0xff0000 : 0) | (!(debug::red | debug::green | debug::blue) ? off : 0));
+		gui.draw<GuiLed>(debug::red ? 0x0000ff : off);
+		gui.draw<GuiLed>(debug::green ? 0x00ff00 : off);
+		gui.draw<GuiLed>(debug::blue ? 0xff0000 : off);
+		gui.draw<GuiLed>((debug::red ? 0x0000ff : 0) | (debug::green ? 0x00ff00 : 0) | (debug::blue ? 0xff0000 : 0) | (!(debug::red | debug::green | debug::blue) ? off : 0));
+
+		//gui.drawText(tahoma16pt8bpp, {0, 0.5}, {0.002, 0.002}, "Ω012345\r");
 
 		// swap render buffer to screen
 		glfwSwapBuffers(this->window);
@@ -142,6 +145,7 @@ void Loop_emu::run(const int &condition) {
 			start = std::chrono::steady_clock::now();
 		}*/
 	}
+	this->exitFlag = false;
 }
 
 

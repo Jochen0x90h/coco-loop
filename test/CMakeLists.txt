@@ -1,47 +1,50 @@
-# hex generator
-separate_arguments(GENERATE_HEX)
-macro(generate_hex TARGET)
-	if(NOT "${GENERATE_HEX}" STREQUAL "" AND NOT "${GENERATE_HEX}" STREQUAL "None")
-		#message("*** Generate Hex for ${TARGET}: ${GENERATE_HEX}")
-		add_custom_command(TARGET ${TARGET}
-			POST_BUILD
-			COMMAND ${GENERATE_HEX} ${TARGET} ${TARGET}.hex
-		)
-	endif()
-endmacro()
+# Generate a test for a board
+# TEST the test application, implemented in ${TEST}.cpp
+# BOARD_LIB a library for a board containing SystemInit() and a linker script for embedded platforms
+function(board_test TEST BOARD_LIB)
+    # check if board library exists for the current platform
+    if(TARGET ${BOARD_LIB})
+        string(REGEX REPLACE ".*\\:" "" BOARD ${BOARD_LIB})
+        set(NAME "${TEST}-${BOARD}")
+        message("*** Test ${TEST} on board ${BOARD}")
 
+        add_executable(${NAME}
+            ${TEST}.cpp
+        )
+        target_include_directories(${NAME}
+            PRIVATE
+                ../
+                ${BOARD}
+        )
+        target_link_libraries(${NAME}
+            ${BOARD_LIB}
+            ${PROJECT_NAME}
+        )
+        #target_link_options(${NAME}
+        #	PUBLIC
+        #		LINKER:-Map=${NAME}.map
+        #)
 
-# iterate over boards and generate tests
-foreach(COMPONENT ${coco-devboards_COMPONENT_NAMES})
-	string(REGEX REPLACE ".*\\:" "" BOARD ${COMPONENT})
-	message("*** Board: ${BOARD}")
+        # generate hex file for flashing the target
+        if(${CMAKE_CROSSCOMPILING})
+            #message("*** Generate Hex for ${NAME} using ${CMAKE_OBJCOPY}")
+            add_custom_command(TARGET ${NAME}
+                POST_BUILD
+                COMMAND ${CMAKE_OBJCOPY} -O ihex ${NAME} ${NAME}.hex
+            )
+        endif()
+    endif()
+endfunction()
 
-	# check if board specific header exists
-	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${BOARD}/LoopTest.hpp)
-		set(NAME "LoopTest-${BOARD}")
-		add_executable(${NAME}
-			LoopTest.cpp
-		)
-		target_include_directories(${NAME}
-			PRIVATE
-				../
-				${BOARD}
-		)
+#message("*** coco-devboards: ${coco-devboards_COMPONENT_NAMES}")
 
-		# find link.ld of board
-		get_target_property(INCLUDES ${COMPONENT} INTERFACE_INCLUDE_DIRECTORIES)
-		target_link_directories(${NAME}
-			PRIVATE
-				${INCLUDES}
-		)
-
-		target_link_libraries(${NAME}
-			coco::coco
-			${COMPONENT}
-			${PROJECT_NAME}
-		)
-
-		# generate hex file for flashing the target
-		generate_hex(${NAME})
-	endif()
-endforeach()
+board_test(LoopTest coco-devboards::native)
+board_test(LoopTest coco-devboards::emu)
+board_test(LoopTest coco-devboards::nrf52dongle)
+board_test(LoopTest coco-devboards::canable02)
+board_test(LoopTest coco-devboards::stm32f0discovery)
+board_test(LoopTest coco-devboards::stm32f3348discovery)
+board_test(LoopTest coco-devboards::stm32f401nucleo)
+board_test(LoopTest coco-devboards::stm32c031nucleo)
+board_test(LoopTest coco-devboards::stm32g431nucleo)
+board_test(LoopTest coco-devboards::stm32g474nucleo)

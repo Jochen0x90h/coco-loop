@@ -30,22 +30,22 @@ Loop_Win32::~Loop_Win32() {
 	CloseHandle(this->port);
 }
 
-void Loop_Win32::run(const int &condition) {
-	int c = condition;
-	while (c == condition) {
+void Loop_Win32::run() {
+	while (!this->exitFlag) {
 		handleEvents();
 	}
+	this->exitFlag = false;
 }
 
 //Awaitable<> Loop_Win32::yield() {
 //	return {this->yieldTasks2};
 //}
 
-Time Loop_Win32::now() {
+Loop::Time Loop_Win32::now() {
 	// todo: handle overflow
 	LARGE_INTEGER time;
 	QueryPerformanceCounter(&time);
-	return {uint32_t(time.QuadPart / this->frequency)};
+	return Time(time.QuadPart / this->frequency);
 }
 
 Awaitable<CoroutineTimedTask> Loop_Win32::sleep(Time time) {
@@ -55,7 +55,7 @@ Awaitable<CoroutineTimedTask> Loop_Win32::sleep(Time time) {
 bool Loop_Win32::handleEvents(int wait) {
 	// determine timeout, only sleep if there are no coroutines waiting on yield()
 	int timeout = 0;
-	/*if (this->yieldTasks1.empty() && this->yieldTasks2.empty())*/ {
+	{
 		Time currentTime = now();
 		Time sleepTime = this->sleepTasks2.getFirstTime(this->sleepTasks1.getFirstTime(currentTime + wait * 1ms));
 		int t = (sleepTime - currentTime).value;
