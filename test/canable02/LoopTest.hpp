@@ -11,3 +11,5 @@ using namespace coco;
 struct Drivers {
 	Loop_TIM2 loop{APB1_TIMER_CLOCK};
 };
+
+Drivers drivers;

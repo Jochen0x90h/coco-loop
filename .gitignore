@@ -1,6 +1,6 @@
 build/
 __pycache__/
-presets.py
+presets.txt
 CMakeUserPresets.json
 
 # VSCode
