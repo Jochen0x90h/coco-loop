@@ -8,8 +8,8 @@ enable_language(CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 # build type
-message("*** Type: ${CMAKE_BUILD_TYPE}${CMAKE_CONFIGURATION_TYPES}")
-add_compile_definitions($<$<CONFIG:Debug>:DEBUG>)
+message("*** Type: ${CMAKE_BUILD_TYPE}")
+add_compile_definitions($<$<CONFIG:Debug>:DEBUG> $<$<CONFIG:Release>:NDEBUG>) # assert() is disabled when NDEBUG is defined
 
 # compiler
 message("*** Compiler: ${CMAKE_CXX_COMPILER_ID}")
@@ -30,8 +30,8 @@ message("*** Platform: ${PLATFORM}")
 # dependencies
 find_package(coco CONFIG)
 if(${PLATFORM} STREQUAL "emu")
-	find_package(coco-font CONFIG)
-	find_package(glfw3 CONFIG)
+    find_package(coco-font CONFIG)
+    find_package(glfw3 CONFIG)
 endif()
 find_package(coco-devboards CONFIG)
 #foreach(BOARD ${coco-devboards_COMPONENT_NAMES})

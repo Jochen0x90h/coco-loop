@@ -5,10 +5,8 @@
 
 namespace coco {
 
-/**
- * Debug LED on the emulator gui.
- * Usage: gui.draw<Led>(color);
- */
+/// @brief Debug LED on the emulator gui.
+/// Usage: gui.draw<Led>(color);
 class GuiLed : public Gui::Renderer {
 public:
 	GuiLed();

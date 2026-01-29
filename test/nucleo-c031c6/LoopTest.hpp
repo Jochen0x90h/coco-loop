@@ -11,7 +11,7 @@ using namespace coco;
 // drivers for LoopTest
 struct Drivers {
     Loop_TIM loop{timer::TIM17_INFO, APB_TIMER_CLOCK};
-	//Loop_SysTick loop{AHB_CLOCK};
+	//Loop_SysTick loop{AHB_CLOCK, Loop_SysTick::Mode::WAIT};
 };
 
 Drivers drivers;

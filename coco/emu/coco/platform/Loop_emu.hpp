@@ -7,30 +7,31 @@
 
 namespace coco {
 
-/**
-	Extension of the native Loop implementation by a simlpe emulator user interface
-*/
+/// @brief Extension of the native Loop implementation by a simlpe emulator user interface
+///
 class Loop_emu : public Loop_native {
 public:
 
-	Loop_emu();
-	~Loop_emu() override;
+    Loop_emu();
+    ~Loop_emu() override;
 
-	void run() override;
+    void run() override;
 
 
-	class GuiHandler : public IntrusiveListNode {
-	public:
-		virtual ~GuiHandler();
-		virtual void handle(Gui &gui) = 0;
-	};
+    /// @brief Handler for graphical user interface of emulator
+    ///
+    class GuiHandler : public IntrusiveListNode {
+    public:
+        virtual ~GuiHandler();
+        virtual void handle(Gui &gui) = 0;
+    };
 
-	IntrusiveList<GuiHandler> guiHandlers;
+    IntrusiveList<GuiHandler> guiHandlers;
 
 protected:
 
-	// opengl window
-	GLFWwindow *window = nullptr;
+    // opengl window
+    GLFWwindow *window_ = nullptr;
 
 };
 
