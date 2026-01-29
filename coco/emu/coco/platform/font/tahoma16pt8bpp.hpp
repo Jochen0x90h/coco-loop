@@ -2,6 +2,6 @@
 
 #include "header.hpp"
 
-extern const Font tahoma16pt8bpp;
+extern const TextureFont tahoma16pt8bpp;
 
 #include "footer.hpp"

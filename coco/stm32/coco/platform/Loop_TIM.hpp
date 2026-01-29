@@ -43,21 +43,20 @@ public:
     };
 
 protected:
-    /**
-     * Internal constructor
-     * @param timerInfo info of timer to use
-     * @param prescaler prescaler for 1ms timer resolution from ABP1 clock for TIM2
-     * @param mode loop mode
-     */
-    Loop_TIM(const timer::Info1 &timerInfo, int prescaler, Mode mode);
+    // timer with capture/compare 1 and capture/compare interrupt
+    using TimerInfo = timer::Info<timer::Feature::CC1, timer::Irq::CC>;
+
+    /// @brief Internal constructor
+    /// @param timerInfo info of timer to use
+    /// @param prescaler prescaler for 1ms timer resolution from ABP1 clock for TIM2
+    /// @param mode loop mode
+    Loop_TIM(const TimerInfo &timerInfo, int prescaler, Mode mode);
 
 public:
-    /**
-     * Constructor
-     * @param timerClock APB1 timer clock frequency (APB1_TIMER_CLOCK), maximum is 65MHz
-     * @param mode loop mode
-     */
-    Loop_TIM(const timer::Info1 &timerInfo, Kilohertz<> timerClock, Mode mode = Mode::POLL)
+    /// @brief Constructor
+    /// @param timerClock APB1 timer clock frequency (APB1_TIMER_CLOCK), maximum is 65MHz
+    /// @param mode loop mode
+    Loop_TIM(const TimerInfo &timerInfo, Kilohertz<> timerClock, Mode mode = Mode::POLL)
         : Loop_TIM(timerInfo, timerClock.value - 1, mode) {}
     ~Loop_TIM() override;
 
@@ -67,11 +66,11 @@ public:
     using Loop::sleep;
 
 protected:
-    TIM_TypeDef *timer;
-    int timerIrq;
-    Mode mode;
+    TIM_TypeDef *timer_;
+    int timerIrq_;
+    Mode mode_;
 
-    int32_t baseTime = 0;
+    int32_t baseTime_ = 0;
 };
 
 } // namespace coco

@@ -11,45 +11,41 @@ Loop_Win32::Loop_Win32() {
 	// http://www.geisswerks.com/ryan/FAQS/timing.html
 	LARGE_INTEGER frequency;
 	QueryPerformanceFrequency(&frequency);
-	this->frequency = frequency.QuadPart / 1000;
+	frequency_ = frequency.QuadPart / 1000;
 
 	// create io completion port
-	this->port = CreateIoCompletionPort(
+	port = CreateIoCompletionPort(
 		INVALID_HANDLE_VALUE, // FileHandle,
 		nullptr, // ExistingCompletionPort,
 		NULL, // CompletionKey,
 		1 // NumberOfConcurrentThreads
 	);
-	if (this->port == INVALID_HANDLE_VALUE) {
+	if (port == INVALID_HANDLE_VALUE) {
 		auto e = GetLastError();
 		std::cout << "CreateIoCompletionPort: " << e << std::endl;
 	}
 }
 
 Loop_Win32::~Loop_Win32() {
-	CloseHandle(this->port);
+	CloseHandle(port);
 }
 
 void Loop_Win32::run() {
-	while (!this->exitFlag) {
+	while (!exitFlag_) {
 		handleEvents();
 	}
-	this->exitFlag = false;
+	exitFlag_ = false;
 }
-
-//Awaitable<> Loop_Win32::yield() {
-//	return {this->yieldTasks2};
-//}
 
 Loop::Time Loop_Win32::now() {
 	// todo: handle overflow
 	LARGE_INTEGER time;
 	QueryPerformanceCounter(&time);
-	return Time(time.QuadPart / this->frequency);
+	return Time(time.QuadPart / frequency_);
 }
 
 Awaitable<CoroutineTimedTask> Loop_Win32::sleep(Time time) {
-	return {this->sleepTasks2, time};
+	return {sleepTasks2_, time};
 }
 
 bool Loop_Win32::handleEvents(int wait) {
@@ -57,7 +53,7 @@ bool Loop_Win32::handleEvents(int wait) {
 	int timeout = 0;
 	{
 		Time currentTime = now();
-		Time sleepTime = this->sleepTasks2.getFirstTime(this->sleepTasks1.getFirstTime(currentTime + wait * 1ms));
+		Time sleepTime = sleepTasks2_.getFirstTime(sleepTasks1_.getFirstTime(currentTime + wait * 1ms));
 		int t = (sleepTime - currentTime).value;
 		timeout = t > 0 ? t : 0;
 	}
@@ -66,7 +62,7 @@ bool Loop_Win32::handleEvents(int wait) {
 	ULONG entryCount;
 	OVERLAPPED_ENTRY entries[16];
 	bool result = GetQueuedCompletionStatusEx(
-		this->port,
+		port,
 		entries,
 		std::size(entries),
 		&entryCount,
@@ -87,14 +83,14 @@ bool Loop_Win32::handleEvents(int wait) {
 	}
 
 	// resume coroutines waiting on yield() and activate yield handlers
-	//this->yieldTasks1.doAll();
-	//this->yieldTasks2.doAll();
+	//yieldTasks1.doAll();
+	//yieldTasks2.doAll();
 
 	// resume coroutines waiting on sleep() and activate time handlers
 	{
 		Time currentTime = now();
-		this->sleepTasks1.doUntil(currentTime);
-		this->sleepTasks2.doUntil(currentTime);
+		sleepTasks1_.doUntil(currentTime);
+		sleepTasks2_.doUntil(currentTime);
 	}
 
 	return result;

@@ -21,31 +21,29 @@ namespace coco {
  */
 class Loop_RTC0 : public Loop_Queue {
 public:
-	enum class Mode {
-		/// continuously poll for events
-		POLL,
+    enum class Mode {
+        /// continuously poll for events
+        POLL,
 
-		/// wait for events using WFE instruction
-		WAIT,
-	};
+        /// wait for events using WFE instruction
+        WAIT,
+    };
 
-	/**
-	 * Constructor
-	 * @param wait wait for events
-	 */
-	Loop_RTC0(Mode mode = Mode::POLL);
-	~Loop_RTC0() override;
+    /// @brief Constructor.
+    /// @param wait wait for events
+    Loop_RTC0(Mode mode = Mode::POLL);
+    ~Loop_RTC0() override;
 
-	void run() override;
-	[[nodiscard]] Time now() override;
-	[[nodiscard]] Awaitable<CoroutineTimedTask> sleep(Time time) override;
-	using Loop::sleep;
+    void run() override;
+    [[nodiscard]] Time now() override;
+    [[nodiscard]] Awaitable<CoroutineTimedTask> sleep(Time time) override;
+    using Loop::sleep;
 
 protected:
-	Mode mode;
+    Mode mode_;
 
-	// base time for now() because the RTC counter is only 24 bit and runs at 16384Hz
-	int32_t baseTime = 0;
+    // base time for now() because the RTC counter is only 24 bit and runs at 16384Hz
+    int32_t baseTime_ = 0;
 };
 
 } // namespace coco

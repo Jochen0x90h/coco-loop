@@ -3,11 +3,20 @@
 
 namespace coco {
 
-Loop_SysTick::Loop_SysTick(int khz, Mode mode) : khz(khz), wait(mode > Mode::INTERRUPT) {
-    this->interval = this->endTime = 0x1000000 / khz;
+Loop_SysTick::Loop_SysTick(int khz, Mode mode)
+    : khz_(khz)
+#ifndef NRF52
+    , wait_(mode == Mode::WAIT)
+#endif
+{
+    // timer interval in milliseconds
+    interval_ = endTime_ = 0x1000000 / khz;
 
-    SysTick->LOAD = khz * this->interval - 1;
-    SysTick->VAL = 0; // reset SysTick counter value and flag
+    // set reload value so that timeout occurs at whole millisecond boundaries
+    SysTick->LOAD = khz * interval_ - 1;
+
+    // reset counter and timeout flag
+    SysTick->VAL = 0;
 
     SysTick->CTRL =
 #ifdef STM32
@@ -24,16 +33,16 @@ Loop_SysTick::~Loop_SysTick() {
 }
 
 void Loop_SysTick::run() {
-    while (!this->exitFlag) {
+    while (!exitFlag_) {
         // wait for event if sleep time has not yet passed
         // see http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dai0321a/BIHICBGB.html
 #ifndef NRF52
-        if (this->wait) {
+        if (wait_) {
             // time when the current SysTick interval ends
-            Time endTime = Time(this->endTime);
+            Time endTime = Time(endTime_);
 
             // get sleep time
-            Time sleepTime = this->sleepTasks2.getFirstTime(this->sleepTasks1.getFirstTime(endTime));
+            Time sleepTime = sleepTasks2_.getFirstTime(sleepTasks1_.getFirstTime(endTime));
 
             // check if we can seep until the end of the current interval
             if (sleepTime == endTime) {
@@ -48,16 +57,16 @@ void Loop_SysTick::run() {
 
         // call all handlers
         Handler *handler;
-        while ((handler = this->handlerQueue.pop()) != nullptr) {
+        while ((handler = handlerQueue_.pop()) != nullptr) {
             handler->handle();
         }
 
         // resume coroutines waiting on sleep()
         auto currentTime = now();
-        this->sleepTasks1.doUntil(currentTime);
-        this->sleepTasks2.doUntil(currentTime);
+        sleepTasks1_.doUntil(currentTime);
+        sleepTasks2_.doUntil(currentTime);
     }
-    this->exitFlag = false;
+    exitFlag_ = false;
 }
 
 Loop::Time Loop_SysTick::now() {
@@ -69,14 +78,14 @@ Loop::Time Loop_SysTick::now() {
         counter = SysTick->VAL;
 
         // advance base time
-        this->endTime = this->endTime + this->interval;
+        endTime_ = endTime_ + interval_;
     }
 
-    return Time(this->endTime - (counter == 0 ? this->interval : counter / this->khz));
+    return Time(endTime_ - (counter == 0 ? interval_ : counter / khz_));
 }
 
 Awaitable<CoroutineTimedTask> Loop_SysTick::sleep(Time time) {
-    return {this->sleepTasks2, time};
+    return {sleepTasks2_, time};
 }
 
 } // namespace coco
