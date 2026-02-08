@@ -22,11 +22,16 @@ if(${PLATFORM} STREQUAL "native" OR ${PLATFORM} STREQUAL "emu")
             PRIVATE
                 native/coco/platform/Loop_Win32.cpp
         )
-    #todo: use try_compile
+    else(${OS} STREQUAL "Linux")
+        # io_uring
+        target_sources(${PROJECT_NAME}
+            PUBLIC FILE_SET platform_headers FILES
+                native/coco/platform/Loop_io_uring.hpp
+            PRIVATE
+                native/coco/platform/Loop_io_uring.cpp
+        )
     #elseif(${OS} STREQUAL "Macos" OR ${OS} STREQUAL "FreeBSD")
         # kqueue
-    #else(${OS} STREQUAL "Linux")
-        # epoll
     endif()
 
     # graphical emulator

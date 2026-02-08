@@ -24,6 +24,7 @@ public:
     Loop_Win32();
     ~Loop_Win32() override;
 
+    // Loop methods
     void run() override;
     [[nodiscard]] Time now() override;
     [[nodiscard]] Awaitable<CoroutineTimedTask> sleep(Time time) override;
@@ -46,11 +47,11 @@ public:
     }
 
 
-    /// @brief IO Completion handler
+    /// @brief IO Completion handler.
     ///
     class CompletionHandler {
     public:
-        virtual ~CompletionHandler();
+        virtual ~CompletionHandler() {}
         virtual void handle(OVERLAPPED *overlapped) = 0;
     };
 

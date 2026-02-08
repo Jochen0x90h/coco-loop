@@ -7,7 +7,7 @@ Add coco-loop/\<version> to your conanfile where version corresponds to the git 
 
 ## Features
 * Event loop, can be instantiated multiple times in separate threads on Windows/MacOS/Linux
-* Uses IO completion ports on Windows
+* Uses IO completion ports on Windows, io_uring on Linux
 * Time with millisecond resolution
 * Sleep and yield methods for passing control to other coroutines (cooperative multitasking)
 * Lets the CPU sleep until an event occurs
