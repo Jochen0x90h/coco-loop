@@ -2,7 +2,7 @@
 # Also creates a CMakeUserPresets.json which is supported by IDEs such as VSCode
 #
 # usage:
-# 1: Copy cpresets.txt containing a list of presets from support/conan/[operating system] to project root (next to this file)
+# 1: Copy cpresets.txt containing a list of presets from coco/support/conan/[operating system] to project root (next to this file)
 # 2: Optional: Open cpresets.txt in an editor and adjust to own needs
 # 3: $ python cinstall.py
 #

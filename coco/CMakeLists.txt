@@ -22,7 +22,7 @@ if(${PLATFORM} STREQUAL "native" OR ${PLATFORM} STREQUAL "emu")
             PRIVATE
                 native/coco/platform/Loop_Win32.cpp
         )
-    else(${OS} STREQUAL "Linux")
+    elseif(LINUX)
         # io_uring
         target_sources(${PROJECT_NAME}
             PUBLIC FILE_SET platform_headers FILES

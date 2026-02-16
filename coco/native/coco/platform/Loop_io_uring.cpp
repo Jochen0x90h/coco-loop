@@ -101,34 +101,44 @@ int Loop_io_uring::handleEvents(int wait) {
         __kernel_timespec timeout;
         timeout.tv_nsec = (t % 1000) * 1000000;
         timeout.tv_sec = t / 1000;
-        auto &entry = sq_.entries[*sq_.tail];
-        entry.opcode = IORING_OP_TIMEOUT;
-        entry.flags = 0;
-        entry.addr = uint64_t(&timeout);
-        entry.len = 1;
-        entry.off = 1; // timer also elapses after one other completion
-        entry.timeout_flags = 0;
-        entry.user_data = 0;
+        
+        uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
+        const uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
+        assert((tail - head) <= sq_.mask && "io_uring full");
+        
+        int index = tail & sq_.mask;
+        sq_.entries[index] = {
+            .opcode = IORING_OP_TIMEOUT,
+            .off = 1, // timer also elapses after one other completion
+            .addr = uint64_t(&timeout),
+            .len = 1, // one timespec structure
+            .user_data = uint64_t(nullptr)}; // timeout is identified by user_data == nullptr
+        sq_.array[index] = index;
 
-        // make submission visible
-        *sq_.tail = (*sq_.tail + 1) & sq_.mask;
-        __sync_synchronize();
+        // increment tail to make submission visible
+        __atomic_store_n(sq_.tail, tail + 1, __ATOMIC_RELEASE);
 
         // submit and wait for at least one completion
-        result = io_uring_enter(ring_, 1, 1, IORING_ENTER_GETEVENTS);
+        int result = io_uring_enter(ring_, 1, 1, IORING_ENTER_GETEVENTS);
+        assert(result == 1 && "io_uring timeout");
     }
 
     // call handler of completed operations
-    while (*cq_.head != *cq_.tail) {
-        io_uring_cqe &entry = cq_.entries[*cq_.head];
+    const uint32_t tail = __atomic_load_n(cq_.tail, __ATOMIC_ACQUIRE);
+    uint32_t head = __atomic_load_n(cq_.head, __ATOMIC_RELAXED);
+    if (head != tail) {
+        __atomic_thread_fence(__ATOMIC_ACQUIRE);
+        do {
+            io_uring_cqe &cqe = cq_.entries[head & cq_.mask];
 
-        // get hander, is nullptr if it was the timeout
-        auto handler = (CompletionHandler *)(entry.user_data);
-        if (handler != nullptr)
-            handler->handle();
+            // get hander (0 is timeout, 1 is cancel)
+            auto handler = cqe.user_data;
+            if (handler > 1)
+                reinterpret_cast<CompletionHandler *>(handler)->handle(cqe);
 
-        *cq_.head = (*cq_.head + 1) & cq_.mask;
-        __sync_synchronize();
+            ++head;
+        } while (head != tail);
+        __atomic_store_n(cq_.head, head, __ATOMIC_RELEASE);
     }
 
     // resume coroutines waiting on sleep() and activate time handlers

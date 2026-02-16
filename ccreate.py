@@ -1,7 +1,7 @@
 # Calls "conan create" for all presets in cpresets.txt
 # This creates packages that can be used by dependent projects
 #
-# usage: python create.py
+# usage: $ python ccreate.py
 #
 
 import subprocess
@@ -16,10 +16,11 @@ file.close()
 # get version from git tag or branch
 try:
     # get modified files and tag
-    modified = subprocess.check_output("git ls-files -m", shell=True).decode().strip()
+    modified = subprocess.check_output("git diff --name-only", shell=True).decode().strip()
+    staged = subprocess.check_output("git diff --name-only --staged", shell=True).decode().strip()
     version = subprocess.check_output("git tag --points-at HEAD", shell=True).decode().strip()
-    if modified != "" or version == "":
-        # get branch if modified or no tag found
+    if modified != "" or staged != "" or version == "":
+        # get branch if modified/staged or no tag found
         version = subprocess.check_output("git rev-parse --abbrev-ref HEAD", shell=True).decode().strip()
 except:
     # not a git repository

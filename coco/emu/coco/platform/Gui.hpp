@@ -4,9 +4,10 @@
 #include <GLFW/glfw3.h> // http://www.glfw.org/docs/latest/quick_guide.html
 #include <coco/Font.hpp>
 #include <map>
-#include <unordered_map>
-#include <typeindex>
 #include <optional>
+#include <typeindex>
+#include <unordered_map>
+#include <vector>
 
 
 namespace coco {
