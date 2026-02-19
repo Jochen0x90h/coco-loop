@@ -55,16 +55,17 @@ public:
         virtual void handle(io_uring_cqe &cqe) = 0;
     };
 
-    /// @brief Submit an IO operation.
+    /// @brief Submit a connect operation.
     /// @tparam Type of address, e.g. sockaddr_in or sockaddr_in6
     /// @param socket Socket file descriptor to operate on
     /// @param address Address to connect to
     /// @param handler Handler gets called on completion
     template <typename T>
-    void submitConnect(int socket, T *address, CompletionHandler *handler) {
+    bool connect(int socket, T &address, CompletionHandler *handler) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
-        assert((tail - head) <= sq_.mask - 1 && "io_uring full");
+        if ((tail - head) >= sq_.mask)
+            return false
 
         int index = tail & sq_.mask;
         sq_.entries[index] = {
@@ -72,7 +73,7 @@ public:
             .flags = IOSQE_IO_LINK,
             .fd = socket,
             .off = sizeof(T),
-            .addr = uint64_t(address),
+            .addr = uint64_t(&address),
             .user_data = uint64_t(handler)};
         sq_.array[index] = index;
 
@@ -90,18 +91,20 @@ public:
         // submit
         int result = io_uring_enter(ring_, 2, 0, 0);
         assert(result == 2 && "io_uring enter");
+        return true;
     }
 
-    /// @brief Submit an IO operation.
-    /// @param op Operation (IORING_OP_SENDMSG, ORING_OP_RECVMSG, IORING_OP_SEND, IORING_OP_RECV)
+    /// @brief Submit a stream send/receive operation.
+    /// @param op Operation (IORING_OP_SEND, IORING_OP_RECV)
     /// @param socket Socket file descriptor to operate on
     /// @param buffer Buffer data
     /// @param length Buffer length
     /// @param handler Handler gets called on completion
-    void submit(uint8_t op, int socket, void *buffer, uint32_t length, CompletionHandler *handler) {
+    bool transfer(uint8_t op, int socket, void *buffer, uint32_t length, CompletionHandler *handler) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
-        assert((tail - head) <= sq_.mask && "io_uring full");
+        if ((tail - head) > sq_.mask)
+            return false;
 
         int index = tail & sq_.mask;
         sq_.entries[index] = {
@@ -118,19 +121,51 @@ public:
         // submit
         int result = io_uring_enter(ring_, 1, 0, 0);
         assert(result == 1 && "io_uring enter");
+        return true;
     }
 
-    /// @brief Submit an IO operation.
+    /// @brief Submit a message send/receive operation.
+    /// @param op Operation (IORING_OP_SENDMSG, ORING_OP_RECVMSG)
+    /// @param socket Socket file descriptor to operate on
+    /// @param message Message to send (of type msghdr)
+    /// @param flags Flags of sendmsg()/recvmsg() (e.g. MSG_DONTWAIT, MSG_OOB, MSG_NOSIGNAL)
+    /// @param handler Handler gets called on completion
+    bool transfer(uint8_t op, int socket, msghdr &message, int flags, CompletionHandler *handler) {
+        uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
+        uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
+        if ((tail - head) > sq_.mask)
+            return false;
+
+        int index = tail & sq_.mask;
+        sq_.entries[index] = {
+            .opcode = op,
+            .fd = socket,
+            .addr = uint64_t(&message),
+            .msg_flags = flags,
+            .user_data = uint64_t(handler)};
+        sq_.array[index] = index;
+
+        // increment tail to make submission visible
+        __atomic_store_n(sq_.tail, tail + 1, __ATOMIC_RELEASE);
+
+        // submit
+        int result = io_uring_enter(ring_, 1, 0, 0);
+        assert(result == 1 && "io_uring enter");
+        return true;
+    }
+
+    /// @brief Submit a file read/write operation.
     /// @param op Operation (IORING_OP_READ, IORING_OP_WRITE)
     /// @param file File descriptor to operate on
     /// @param offset Offset into file
     /// @param buffer Buffer data
     /// @param length Buffer length
     /// @param handler Handler gets called on completion
-    void submit(uint8_t op, int file, uint64_t offset, void *buffer, uint32_t length, CompletionHandler *handler) {
+    bool transfer(uint8_t op, int file, uint64_t offset, void *buffer, uint32_t length, CompletionHandler *handler) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
-        assert((tail - head) <= sq_.mask && "io_uring full");
+        if ((tail - head) > sq_.mask)
+            return false;
 
         int index = tail & sq_.mask;
         sq_.entries[index] = {
@@ -148,14 +183,16 @@ public:
         // submit
         int result = io_uring_enter(ring_, 1, 0, 0);
         assert(result == 1 && "io_uring enter");
+        return true;
     }
 
     /// @brief Cancel a pending operation for the given handler.
     /// @param handler Handler to cancel an operation for
-    void cancel(CompletionHandler *handler) {
+    bool cancel(CompletionHandler *handler) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
-        assert((tail - head) <= sq_.mask && "io_uring full");
+        if ((tail - head) > sq_.mask)
+            return false;
 
         int index = tail & sq_.mask;
         sq_.entries[index] = {
@@ -170,13 +207,14 @@ public:
         // submit
         int result = io_uring_enter(ring_, 1, 0, 0);
         assert(result == 1 && "io_uring enter");
+        return true;
     }
 
     /// @brief Handle events and wait at most the given number of milliseconds for new events
     /// @param wait maximum time to wait in milliseconds
     int handleEvents(int wait = std::numeric_limits<int>::max() / 2);
 
-//protected:
+protected:
     // io_uring instance
     int ring_ = -1;
 

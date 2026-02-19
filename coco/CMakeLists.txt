@@ -19,6 +19,8 @@ if(${PLATFORM} STREQUAL "native" OR ${PLATFORM} STREQUAL "emu")
         target_sources(${PROJECT_NAME}
             PUBLIC FILE_SET platform_headers FILES
                 native/coco/platform/Loop_Win32.hpp
+                native/coco/platform/WindowsDef.hpp
+                native/coco/platform/WindowsUndef.hpp
             PRIVATE
                 native/coco/platform/Loop_Win32.cpp
         )

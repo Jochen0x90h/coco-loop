@@ -3,15 +3,9 @@
 #include <coco/Loop.hpp>
 #include <coco/Callback.hpp>
 
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
+#include "WindowsDef.hpp"
 #include <Windows.h>
-#undef interface
-#undef INTERFACE
-#undef IN
-#undef OUT
-#undef READ_ATTRIBUTES
-#undef ERROR
+#include "WindowsUndef.hpp"
 
 
 namespace coco {
