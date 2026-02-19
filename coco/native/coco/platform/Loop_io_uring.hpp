@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <poll.h>
 #include <sys/syscall.h>
+#include <sys/socket.h> // msghdr
 #include <unistd.h>
 
 
@@ -65,7 +66,7 @@ public:
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
         if ((tail - head) >= sq_.mask)
-            return false
+            return false;
 
         int index = tail & sq_.mask;
         sq_.entries[index] = {
@@ -130,7 +131,7 @@ public:
     /// @param message Message to send (of type msghdr)
     /// @param flags Flags of sendmsg()/recvmsg() (e.g. MSG_DONTWAIT, MSG_OOB, MSG_NOSIGNAL)
     /// @param handler Handler gets called on completion
-    bool transfer(uint8_t op, int socket, msghdr &message, int flags, CompletionHandler *handler) {
+    bool transfer(uint8_t op, int socket, msghdr &message, uint32_t flags, CompletionHandler *handler) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
         if ((tail - head) > sq_.mask)
