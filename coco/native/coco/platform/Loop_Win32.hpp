@@ -3,9 +3,9 @@
 #include <coco/Loop.hpp>
 #include <coco/Callback.hpp>
 
-#include "WindowsDef.hpp"
+#include <coco/platform/WindowsDef.hpp>
 #include <Windows.h>
-#include "WindowsUndef.hpp"
+#include <coco/platform/WindowsUndef.hpp>
 
 
 namespace coco {
