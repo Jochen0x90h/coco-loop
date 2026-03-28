@@ -1,7 +1,8 @@
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME}
-    PUBLIC FILE_SET headers TYPE HEADERS BASE_DIRS FILES
+    PUBLIC FILE_SET headers TYPE HEADERS FILES
         Loop.hpp
     PRIVATE
         Loop.cpp
