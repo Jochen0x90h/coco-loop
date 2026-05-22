@@ -11,7 +11,7 @@ static inline int io_uring_setup(unsigned entries, struct io_uring_params *p) {
     return syscall(__NR_io_uring_setup, entries, p);
 }
 
-Loop_io_uring::Loop_io_uring() {   
+Loop_io_uring::Loop_io_uring() {
     io_uring_params params;
     memset(&params, 0, sizeof(params));
     //params.flags = IORING_SETUP_SQPOLL;
@@ -24,7 +24,7 @@ Loop_io_uring::Loop_io_uring() {
         std::cerr << "io_uring_setup failed" << std::endl;
         return;
     }
-    
+
     int sqSize = params.sq_off.array + params.sq_entries * sizeof(__u32);
     int cqSize = params.cq_off.cqes + params.cq_entries * sizeof(io_uring_cqe);
     int ringSize = std::max(sqSize, cqSize);
@@ -37,7 +37,7 @@ Loop_io_uring::Loop_io_uring() {
         std::cerr << "mmap failed" << std::endl;
         return;
     }
-    
+
     // submission queue entries
     void *sqes = mmap(NULL, params.sq_entries * sizeof(struct io_uring_sqe),
         PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
@@ -101,11 +101,11 @@ int Loop_io_uring::handleEvents(int wait) {
         __kernel_timespec timeout;
         timeout.tv_nsec = (t % 1000) * 1000000;
         timeout.tv_sec = t / 1000;
-        
+
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         const uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
         assert((tail - head) <= sq_.mask && "io_uring full");
-        
+
         int index = tail & sq_.mask;
         sq_.entries[index] = {
             .opcode = IORING_OP_TIMEOUT,
@@ -134,7 +134,7 @@ int Loop_io_uring::handleEvents(int wait) {
             // get hander (0 is timeout, 1 is cancel)
             auto handler = cqe.user_data;
             if (handler > 1)
-                reinterpret_cast<CompletionHandler *>(handler)->handle(cqe);
+                reinterpret_cast<CompletionHandler *>(handler)->onCompletion(cqe);
 
             ++head;
         } while (head != tail);
@@ -144,7 +144,7 @@ int Loop_io_uring::handleEvents(int wait) {
     // resume coroutines waiting on sleep() and activate time handlers
     {
         Time currentTime = now();
-        sleepTasks1_.doUntil(currentTime);
+        sleepTasks1_.doUntil(currentTime, [](TimeoutHandler &handler) {handler.onTimeout();});
         sleepTasks2_.doUntil(currentTime);
     }
 

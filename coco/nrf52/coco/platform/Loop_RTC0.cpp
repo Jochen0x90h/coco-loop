@@ -57,14 +57,14 @@ void Loop_RTC0::run() {
         }
 
         // call handlers
-        Handler *handler;
+        CompletionHandler *handler;
         while ((handler = handlerQueue_.pop()) != nullptr) {
-            handler->handle();
+            handler->onCompletion();
         }
 
         // resume coroutines waiting on sleep()
         currentTime = now();
-        sleepTasks1_.doUntil(currentTime);
+        sleepTasks1_.doUntil(currentTime, [](TimeoutHandler &handler) {handler.onTimeout();});
         sleepTasks2_.doUntil(currentTime);
     }
     exitFlag_ = false;

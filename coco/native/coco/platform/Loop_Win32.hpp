@@ -2,6 +2,8 @@
 
 #include <coco/Loop.hpp>
 #include <coco/Callback.hpp>
+#include <coco/TimedTask.hpp>
+#include <coco/IntrusiveTimeoutQueue.hpp>
 
 #include <coco/platform/WindowsDef.hpp>
 #include <Windows.h>
@@ -24,20 +26,39 @@ public:
     [[nodiscard]] Awaitable<CoroutineTimedTask> sleep(Time time) override;
     using Loop::sleep;
 
-
-    void invoke(TimedTask<Callback> &task, Time time) {
+/*
+    void invoke(TimedTask<Callback<>> &task, Time time) {
         task.cancelAndSet(time);
         this->sleepTasks1_.add(task);
     }
 
-    void invoke(TimedTask<Callback> &task, Duration duration) {
+    void invoke(TimedTask<Callback<>> &task, Duration duration = {}) {
         task.cancelAndSet(now() + duration);
         this->sleepTasks1_.add(task);
     }
+*/
 
-    void invoke(TimedTask<Callback> &task) {
-        task.cancelAndSet(now());
-        this->sleepTasks1_.add(task);
+    /// @brief Timeout handler.
+    ///
+    class TimeoutHandler : private IntrusiveListNode {
+        friend class IntrusiveTimeoutQueue<TimeoutHandler>;
+    public:
+        using Node = IntrusiveListNode;
+        using IntrusiveListNode::remove;
+
+        virtual ~TimeoutHandler() {}
+        virtual void onTimeout() = 0;
+
+    private:
+        Time time;
+    };
+
+    void invoke(TimeoutHandler &handler, Time time) {
+        this->sleepTasks1_.add(handler, time);
+    }
+
+    void invoke(TimeoutHandler &handler, Duration duration = {}) {
+        this->sleepTasks1_.add(handler, now() + duration);
     }
 
 
@@ -46,7 +67,7 @@ public:
     class CompletionHandler {
     public:
         virtual ~CompletionHandler() {}
-        virtual void handle(OVERLAPPED *overlapped) = 0;
+        virtual void onCompletion(OVERLAPPED *overlapped) = 0;
     };
 
     /// @brief Handle events and wait at most the given number of milliseconds for new events
@@ -61,7 +82,8 @@ protected:
     int64_t frequency_;
 
     // sleep tasks
-    TimedTaskList<Callback> sleepTasks1_;
+    //TimedTaskList<Callback<>> sleepTasks1_;
+    IntrusiveTimeoutQueue<TimeoutHandler> sleepTasks1_;
     CoroutineTimedTaskList sleepTasks2_;
 };
 

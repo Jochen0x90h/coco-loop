@@ -121,7 +121,7 @@ void Loop_emu::run() {
             auto &handler = *it;
             ++it;
 
-            handler.handle(gui);
+            handler.onGui(gui);
         }
 
         // debug LEDs

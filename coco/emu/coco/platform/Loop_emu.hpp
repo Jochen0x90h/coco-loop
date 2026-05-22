@@ -18,12 +18,12 @@ public:
     void run() override;
 
 
-    /// @brief Handler for graphical user interface of emulator
-    ///
+    /// @brief Handler for graphical user interface of emulator.
+    /// Update internal state and draw.
     class GuiHandler : public IntrusiveListNode {
     public:
         virtual ~GuiHandler();
-        virtual void handle(Gui &gui) = 0;
+        virtual void onGui(Gui &gui) = 0;
     };
 
     IntrusiveList<GuiHandler> guiHandlers;

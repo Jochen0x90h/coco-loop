@@ -7,7 +7,7 @@
 namespace coco {
 
 /// @brief D-Pad with optional center button
-/// Usage: gui.widget<Dpad>(id, haveButton);
+/// Usage: gui.widget<Dpad>(id, haveButton);, also see coco-io
 class GuiDpad : public Gui::Widget {
 public:
     struct Result {

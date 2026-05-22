@@ -6,7 +6,7 @@
 namespace coco {
 
 /// @brief Rotary button (incremental encoder knob with push button) on the emulator gui.
-/// Usage: gui.widget<GuiRotaryButton>(id, haveCenterButton);
+/// Usage: gui.widget<GuiRotaryButton>(id, haveCenterButton);, also see coco-io
 class GuiRotaryKnob : public Gui::Widget {
 public:
     struct Result {
@@ -62,8 +62,6 @@ protected:
     bool lastButton = false;
 
     // last mouse position
-    //float x = 0;
-    //float y = 0;
     float2 lastPosition;
 };
 

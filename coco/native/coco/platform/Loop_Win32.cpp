@@ -73,7 +73,7 @@ bool Loop_Win32::handleEvents(int wait) {
         for (int i = 0; i < entryCount; ++i) {
             auto &entry = entries[i];
             auto handler = (CompletionHandler *)(entry.lpCompletionKey);
-            handler->handle(entry.lpOverlapped);
+            handler->onCompletion(entry.lpOverlapped);
         }
     } else {
         // timeout
@@ -89,7 +89,7 @@ bool Loop_Win32::handleEvents(int wait) {
     // resume coroutines waiting on sleep() and activate time handlers
     {
         Time currentTime = now();
-        sleepTasks1_.doUntil(currentTime);
+        sleepTasks1_.doUntil(currentTime, [](TimeoutHandler &handler) {handler.onTimeout();});
         sleepTasks2_.doUntil(currentTime);
     }
 

@@ -13,7 +13,7 @@ public:
     ~Newline_emu() override;
 
 protected:
-    void handle(Gui &gui) override;
+    void onGui(Gui &gui) override;
 };
 
 } // namespace coco

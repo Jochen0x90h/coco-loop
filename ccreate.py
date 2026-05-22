@@ -37,6 +37,6 @@ for preset in presets:
     #print(f"Platform: >{platform}< Profile: >{profile}<")
 
     # create
-    result = subprocess.run(f"conan create -nr -pr:b default -pr:h {profile} -b missing -o:a \"&:platform={platform}\" . --version {version}", shell=True)
+    result = subprocess.run(f"conan create -nr -pr:b default -pr:h {profile} -b missing -o:a \"&:platform={platform}\" --version {version} .", shell=True)
     if result.returncode != 0:
         exit()

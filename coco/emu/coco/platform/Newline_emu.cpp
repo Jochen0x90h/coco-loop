@@ -10,7 +10,7 @@ Newline_emu::Newline_emu(Loop_emu &loop) {
 Newline_emu::~Newline_emu() {
 }
 
-void Newline_emu::handle(Gui &gui) {
+void Newline_emu::onGui(Gui &gui) {
     gui.newline();
 }
 

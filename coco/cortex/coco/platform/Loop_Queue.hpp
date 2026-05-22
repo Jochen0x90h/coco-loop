@@ -3,6 +3,7 @@
 #include <coco/Loop.hpp>
 #include <coco/Callback.hpp>
 #include <coco/IntrusiveMpscQueue.hpp>
+#include <coco/IntrusiveTimeoutQueue.hpp>
 #include <coco/platform/platform.hpp>
 
 
@@ -19,33 +20,52 @@ namespace coco {
 class Loop_Queue : public Loop {
 public:
 
-    void invoke(TimedTask<Callback> &task, Time time) {
+    /*void invoke(TimedTask<Callback<>> &task, Time time) {
         task.cancelAndSet(time);
         sleepTasks1_.add(task);
     }
 
-    void invoke(TimedTask<Callback> &task, Duration duration) {
+    void invoke(TimedTask<Callback<>> &task, Duration duration = {}) {
         task.cancelAndSet(now() + duration);
         sleepTasks1_.add(task);
-    }
+    }*/
 
-    void invoke(TimedTask<Callback> &task) {
-        task.cancelAndSet(now());
-        sleepTasks1_.add(task);
-    }
-
-    /// @brief Event handler that handles finished device operations
+    /// @brief Timeout handler.
     ///
-    class Handler : public IntrusiveMpscQueueNode {
+    class TimeoutHandler : private IntrusiveListNode {
+        friend class IntrusiveTimeoutQueue<TimeoutHandler>;
     public:
-        virtual ~Handler() {}
-        virtual void handle() = 0;
+        using Node = IntrusiveListNode;
+        using IntrusiveListNode::remove;
+
+        virtual ~TimeoutHandler() {}
+        virtual void onTimeout() = 0;
+
+    private:
+        Time time;
+    };
+
+    void invoke(TimeoutHandler &handler, Time time) {
+        this->sleepTasks1_.add(handler, time);
+    }
+
+    void invoke(TimeoutHandler &handler, Duration duration = {}) {
+        this->sleepTasks1_.add(handler, now() + duration);
+    }
+
+
+    /// @brief Completion handler that handles finished device operations.
+    ///
+    class CompletionHandler : public IntrusiveMpscQueueNode {
+    public:
+        virtual ~CompletionHandler() {}
+        virtual void onCompletion() = 0;
     };
 
     /// @brief Push a handler onto the handler queue so that the main application gets notified.
     /// Useful for example for finished device operations. Can be called from the interrupt service routine of the
     /// device e.g. when a read or write operation has finished.
-    void push(Handler &handler) {
+    void push(CompletionHandler &handler) {
         handlerQueue_.push(handler);
 
         // set event flag so that the next __WFE() does not sleep as there are new elements in the handler queue
@@ -55,13 +75,14 @@ public:
 protected:
 
     // sleep tasks
-    TimedTaskList<Callback> sleepTasks1_;
+    //TimedTaskList<Callback<>> sleepTasks1_;
+    IntrusiveTimeoutQueue<TimeoutHandler> sleepTasks1_;
 
     // tasks for sleep() and yield()
     CoroutineTimedTaskList sleepTasks2_;
 
     // handlers for finished device operations
-    IntrusiveMpscQueue<Handler> handlerQueue_;
+    IntrusiveMpscQueue<CompletionHandler> handlerQueue_;
 };
 
 } // namespace coco
