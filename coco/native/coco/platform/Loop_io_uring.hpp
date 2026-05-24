@@ -2,6 +2,7 @@
 
 #include <coco/Loop.hpp>
 #include <coco/Callback.hpp>
+#include <coco/IntrusiveTimeoutQueue.hpp>
 #include <linux/io_uring.h>
 #include <cassert>
 #include <cstdint>
@@ -79,6 +80,7 @@ public:
     /// @param socket Socket file descriptor to operate on
     /// @param address Address to connect to
     /// @param handler Handler gets called on completion
+    /// @return False if submission queue is full
     template <typename T>
     bool connect(int socket, T &address, CompletionHandler *handler) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
@@ -119,6 +121,7 @@ public:
     /// @param buffer Buffer data
     /// @param length Buffer length
     /// @param handler Handler gets called on completion
+    /// @return False if submission queue is full
     bool transfer(uint8_t op, int socket, void *buffer, uint32_t length, CompletionHandler *handler) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
@@ -149,6 +152,7 @@ public:
     /// @param message Message to send (of type msghdr)
     /// @param flags Flags of sendmsg()/recvmsg() (e.g. MSG_DONTWAIT, MSG_OOB, MSG_NOSIGNAL)
     /// @param handler Handler gets called on completion
+    /// @return False if submission queue is full
     bool transfer(uint8_t op, int socket, msghdr &message, uint32_t flags, CompletionHandler *handler) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
@@ -180,6 +184,7 @@ public:
     /// @param buffer Buffer data
     /// @param length Buffer length
     /// @param handler Handler gets called on completion
+    /// @return False if submission queue is full
     bool transfer(uint8_t op, int file, uint64_t offset, void *buffer, uint32_t length, CompletionHandler *handler) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
@@ -205,8 +210,37 @@ public:
         return true;
     }
 
+    /// @brief Poll for readable/writable.
+    /// @param fd File descriptor (e.g. regular file or socket)
+    /// @param events Events to poll for
+    /// @param handler Handler gets called on completion
+    /// @return False if submission queue is full
+    bool poll(int fd, int events, CompletionHandler *handler) {
+        uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
+        uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
+        if ((tail - head) > sq_.mask)
+            return false;
+
+        int index = tail & sq_.mask;
+        sq_.entries[index] = {
+            .opcode = IORING_OP_POLL_ADD,
+            .fd = fd,
+            .poll_events = __u16(events),
+            .user_data = uint64_t(handler)};
+        sq_.array[index] = index;
+
+        // increment tail to make submission visible
+        __atomic_store_n(sq_.tail, tail + 1, __ATOMIC_RELEASE);
+
+        // submit
+        int result = io_uring_enter(ring_, 1, 0, 0);
+        assert(result == 1 && "io_uring enter");
+        return true;
+    }
+
     /// @brief Cancel a pending operation for the given handler.
     /// @param handler Handler to cancel an operation for
+    /// @return False if submission queue is full
     bool cancel(CompletionHandler *handler) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
