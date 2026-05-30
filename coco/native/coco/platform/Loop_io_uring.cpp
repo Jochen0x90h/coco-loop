@@ -132,9 +132,10 @@ int Loop_io_uring::handleEvents(int wait) {
             io_uring_cqe &cqe = cq_.entries[head & cq_.mask];
 
             // get hander (0 is timeout, 1 is cancel)
-            auto handler = cqe.user_data;
+            auto handler = cqe.user_data & ~uint64_t(3);
+            int id = cqe.user_data & 3;
             if (handler > 1)
-                reinterpret_cast<CompletionHandler *>(handler)->onCompletion(cqe);
+                reinterpret_cast<CompletionHandler *>(handler)->onCompletion(cqe, id);
 
             ++head;
         } while (head != tail);

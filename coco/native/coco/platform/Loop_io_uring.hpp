@@ -72,17 +72,17 @@ public:
     class CompletionHandler {
     public:
         virtual ~CompletionHandler() {}
-        virtual void onCompletion(io_uring_cqe &cqe) = 0;
+        virtual void onCompletion(io_uring_cqe &cqe, int id) = 0;
     };
 
     /// @brief Submit a connect operation.
     /// @tparam Type of address, e.g. sockaddr_in or sockaddr_in6
+    /// @param handler Handler gets called on completion
     /// @param socket Socket file descriptor to operate on
     /// @param address Address to connect to
-    /// @param handler Handler gets called on completion
     /// @return False if submission queue is full
     template <typename T>
-    bool connect(int socket, T &address, CompletionHandler *handler) {
+    bool connect(CompletionHandler &handler, int socket, T &address) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
         if ((tail - head) >= sq_.mask)
@@ -95,7 +95,7 @@ public:
             .fd = socket,
             .off = sizeof(T),
             .addr = uint64_t(&address),
-            .user_data = uint64_t(handler)};
+            .user_data = uint64_t(&handler)};
         sq_.array[index] = index;
 
         index = (tail + 1) & sq_.mask;
@@ -103,7 +103,7 @@ public:
             .opcode = IORING_OP_POLL_ADD,
             .fd = socket,
             .poll_events = POLLOUT,
-            .user_data = uint64_t(handler)};
+            .user_data = uint64_t(&handler)};
         sq_.array[index] = index;
 
         // increment tail to make submission visible
@@ -116,13 +116,13 @@ public:
     }
 
     /// @brief Submit a stream send/receive operation.
+    /// @param handler Handler gets called on completion
     /// @param op Operation (IORING_OP_SEND, IORING_OP_RECV)
     /// @param socket Socket file descriptor to operate on
     /// @param buffer Buffer data
     /// @param length Buffer length
-    /// @param handler Handler gets called on completion
     /// @return False if submission queue is full
-    bool transfer(uint8_t op, int socket, void *buffer, uint32_t length, CompletionHandler *handler) {
+    bool transfer(CompletionHandler &handler, uint8_t op, int socket, void *buffer, uint32_t length) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
         if ((tail - head) > sq_.mask)
@@ -134,7 +134,7 @@ public:
             .fd = socket,
             .addr = uint64_t(buffer),
             .len = length,
-            .user_data = uint64_t(handler)};
+            .user_data = uint64_t(&handler)};
         sq_.array[index] = index;
 
         // increment tail to make submission visible
@@ -147,13 +147,13 @@ public:
     }
 
     /// @brief Submit a message send/receive operation.
+    /// @param handler Handler gets called on completion
     /// @param op Operation (IORING_OP_SENDMSG, ORING_OP_RECVMSG)
     /// @param socket Socket file descriptor to operate on
     /// @param message Message to send (of type msghdr)
     /// @param flags Flags of sendmsg()/recvmsg() (e.g. MSG_DONTWAIT, MSG_OOB, MSG_NOSIGNAL)
-    /// @param handler Handler gets called on completion
     /// @return False if submission queue is full
-    bool transfer(uint8_t op, int socket, msghdr &message, uint32_t flags, CompletionHandler *handler) {
+    bool transfer(CompletionHandler &handler, uint8_t op, int socket, msghdr &message, uint32_t flags) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
         if ((tail - head) > sq_.mask)
@@ -165,7 +165,7 @@ public:
             .fd = socket,
             .addr = uint64_t(&message),
             .msg_flags = flags,
-            .user_data = uint64_t(handler)};
+            .user_data = uint64_t(&handler)};
         sq_.array[index] = index;
 
         // increment tail to make submission visible
@@ -178,14 +178,14 @@ public:
     }
 
     /// @brief Submit a file read/write operation.
+    /// @param handler Handler gets called on completion
     /// @param op Operation (IORING_OP_READ, IORING_OP_WRITE)
     /// @param file File descriptor to operate on
     /// @param offset Offset into file
     /// @param buffer Buffer data
     /// @param length Buffer length
-    /// @param handler Handler gets called on completion
     /// @return False if submission queue is full
-    bool transfer(uint8_t op, int file, uint64_t offset, void *buffer, uint32_t length, CompletionHandler *handler) {
+    bool transfer(CompletionHandler &handler, uint8_t op, int file, uint64_t offset, void *buffer, uint32_t length) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
         if ((tail - head) > sq_.mask)
@@ -198,7 +198,7 @@ public:
             .off = offset,
             .addr = uint64_t(buffer),
             .len = length,
-            .user_data = uint64_t(handler)};
+            .user_data = uint64_t(&handler)};
         sq_.array[index] = index;
 
         // increment tail to make submission visible
@@ -211,11 +211,12 @@ public:
     }
 
     /// @brief Poll for readable/writable.
-    /// @param fd File descriptor (e.g. regular file or socket)
-    /// @param events Events to poll for
     /// @param handler Handler gets called on completion
+    /// @param fd File descriptor (e.g. regular file or socket)
+    /// @param events Events to poll for (e.g. POLLIN, POLLOUT)
+    /// @param id Id in range 0-3 to distinguish multiple poll operations for the same handler (e.g. for different file descriptors)
     /// @return False if submission queue is full
-    bool poll(int fd, int events, CompletionHandler *handler) {
+    bool poll(CompletionHandler &handler, int fd, int events, int id = 0) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
         if ((tail - head) > sq_.mask)
@@ -226,7 +227,7 @@ public:
             .opcode = IORING_OP_POLL_ADD,
             .fd = fd,
             .poll_events = __u16(events),
-            .user_data = uint64_t(handler)};
+            .user_data = uint64_t(&handler) | id};
         sq_.array[index] = index;
 
         // increment tail to make submission visible
@@ -241,7 +242,7 @@ public:
     /// @brief Cancel a pending operation for the given handler.
     /// @param handler Handler to cancel an operation for
     /// @return False if submission queue is full
-    bool cancel(CompletionHandler *handler) {
+    bool cancel(CompletionHandler &handler) {
         uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
         uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
         if ((tail - head) > sq_.mask)
@@ -250,7 +251,7 @@ public:
         int index = tail & sq_.mask;
         sq_.entries[index] = {
             .opcode = IORING_OP_ASYNC_CANCEL,
-            .addr = uint64_t(handler),
+            .addr = uint64_t(&handler),
             .user_data = 1};
         sq_.array[index] = index;
 
