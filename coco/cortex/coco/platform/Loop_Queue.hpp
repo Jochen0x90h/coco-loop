@@ -3,7 +3,7 @@
 #include <coco/Loop.hpp>
 #include <coco/Callback.hpp>
 #include <coco/IntrusiveMpscQueue.hpp>
-#include <coco/IntrusiveTimeoutQueue.hpp>
+#include <coco/IntrusiveSortedTaskList.hpp>
 #include <coco/platform/platform.hpp>
 
 
@@ -33,16 +33,16 @@ public:
     /// @brief Timeout handler.
     ///
     class TimeoutHandler : private IntrusiveListNode {
-        friend class IntrusiveTimeoutQueue<TimeoutHandler>;
+        friend class IntrusiveSortedTaskList<TimeoutHandler>;
     public:
-        using Node = IntrusiveListNode;
         using IntrusiveListNode::remove;
 
         virtual ~TimeoutHandler() {}
         virtual void onTimeout() = 0;
+        void operator ()() {onTimeout();}
 
     private:
-        Time time;
+        Time value;
     };
 
     void invoke(TimeoutHandler &handler, Time time) {
@@ -76,7 +76,7 @@ protected:
 
     // sleep tasks
     //TimedTaskList<Callback<>> sleepTasks1_;
-    IntrusiveTimeoutQueue<TimeoutHandler> sleepTasks1_;
+    IntrusiveSortedTaskList<TimeoutHandler> sleepTasks1_;
 
     // tasks for sleep() and yield()
     CoroutineTimedTaskList sleepTasks2_;

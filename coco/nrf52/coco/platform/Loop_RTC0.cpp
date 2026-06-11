@@ -32,7 +32,7 @@ void Loop_RTC0::run() {
     Time currentTime = now();
     while (!exitFlag_) {
         // get sleep time (point in time when the first task is due)
-        Time sleepTime = sleepTasks2_.getFirstTime(sleepTasks1_.getFirstTime(currentTime + MAX_SLEEP * 1ms/*Duration::max() / 2*/));
+        Time sleepTime = sleepTasks2_.nextValue(sleepTasks1_.nextValue(currentTime + MAX_SLEEP * 1ms/*Duration::max() / 2*/));
 
         // wait for event if sleep time has not yet passed
         // see http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dai0321a/BIHICBGB.html
@@ -64,7 +64,7 @@ void Loop_RTC0::run() {
 
         // resume coroutines waiting on sleep()
         currentTime = now();
-        sleepTasks1_.doUntil(currentTime, [](TimeoutHandler &handler) {handler.onTimeout();});
+        sleepTasks1_.doUntil(currentTime);//, [](TimeoutHandler &handler) {handler.onTimeout();});
         sleepTasks2_.doUntil(currentTime);
     }
     exitFlag_ = false;

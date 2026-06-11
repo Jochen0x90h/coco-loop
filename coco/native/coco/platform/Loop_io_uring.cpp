@@ -94,7 +94,7 @@ Awaitable<CoroutineTimedTask> Loop_io_uring::sleep(Time time) {
 int Loop_io_uring::handleEvents(int wait) {
     // determine timeout in milliseconds
     Time currentTime = now();
-    Time sleepTime = sleepTasks2_.getFirstTime(sleepTasks1_.getFirstTime(currentTime + wait * 1ms));
+    Time sleepTime = sleepTasks2_.nextValue(sleepTasks1_.nextValue(currentTime + wait * 1ms));
     int t = (sleepTime - currentTime).value;
     int result = 0;
     if (t > 0) {
@@ -145,7 +145,7 @@ int Loop_io_uring::handleEvents(int wait) {
     // resume coroutines waiting on sleep() and activate time handlers
     {
         Time currentTime = now();
-        sleepTasks1_.doUntil(currentTime, [](TimeoutHandler &handler) {handler.onTimeout();});
+        sleepTasks1_.doUntil(currentTime);//, [](TimeoutHandler &handler) {handler.onTimeout();});
         sleepTasks2_.doUntil(currentTime);
     }
 

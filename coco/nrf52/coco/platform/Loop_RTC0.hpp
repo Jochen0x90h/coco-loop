@@ -9,16 +9,14 @@
 
 namespace coco {
 
-/**
- * Implementation of the Loop interface using RTC0
- *
- * Reference manual:
- *   https://infocenter.nordicsemi.com/topic/ps_nrf52840/rtc.html?cp=5_0_0_5_21
- *
- * Resources:
- *   NRF_RTC0
- *     CC[0]
- */
+/// @brief Implementation of the Loop interface using RTC0
+///
+/// Reference manual:
+///   https://infocenter.nordicsemi.com/topic/ps_nrf52840/rtc.html?cp=5_0_0_5_21
+///
+/// Resources:
+///   NRF_RTC0
+///     CC[0]
 class Loop_RTC0 : public Loop_Queue {
 public:
     enum class Mode {

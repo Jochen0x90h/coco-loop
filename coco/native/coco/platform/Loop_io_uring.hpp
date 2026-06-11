@@ -1,8 +1,7 @@
 #pragma once
 
 #include <coco/Loop.hpp>
-#include <coco/Callback.hpp>
-#include <coco/IntrusiveTimeoutQueue.hpp>
+#include <coco/IntrusiveSortedTaskList.hpp>
 #include <linux/io_uring.h>
 #include <cassert>
 #include <cstdint>
@@ -46,16 +45,16 @@ public:
     /// @brief Timeout handler.
     ///
     class TimeoutHandler : private IntrusiveListNode {
-        friend class IntrusiveTimeoutQueue<TimeoutHandler>;
+        friend class IntrusiveSortedTaskList<TimeoutHandler>;
     public:
-        using Node = IntrusiveListNode;
         using IntrusiveListNode::remove;
 
         virtual ~TimeoutHandler() {}
         virtual void onTimeout() = 0;
+        void operator ()() {onTimeout();}
 
     private:
-        Time time;
+        Time value;
     };
 
     void invoke(TimeoutHandler &handler, Time time) {
@@ -295,8 +294,7 @@ protected:
     CompletionQueue cq_;
 
     // sleep tasks
-    IntrusiveTimeoutQueue<TimeoutHandler> sleepTasks1_;
-    //TimedTaskList<Callback> sleepTasks1_;
+    IntrusiveSortedTaskList<TimeoutHandler> sleepTasks1_;
     CoroutineTimedTaskList sleepTasks2_;
 };
 

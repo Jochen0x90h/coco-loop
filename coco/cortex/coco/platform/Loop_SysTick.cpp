@@ -42,7 +42,7 @@ void Loop_SysTick::run() {
             Time endTime = Time(endTime_);
 
             // get sleep time
-            Time sleepTime = sleepTasks2_.getFirstTime(sleepTasks1_.getFirstTime(endTime));
+            Time sleepTime = sleepTasks2_.nextValue(sleepTasks1_.nextValue(endTime));
 
             // check if we can seep until the end of the current interval
             if (sleepTime == endTime) {
@@ -63,7 +63,7 @@ void Loop_SysTick::run() {
 
         // resume coroutines waiting on sleep()
         auto currentTime = now();
-        sleepTasks1_.doUntil(currentTime, [](TimeoutHandler &handler) {handler.onTimeout();});
+        sleepTasks1_.doUntil(currentTime);//, [](TimeoutHandler &handler) {handler.onTimeout();});
         sleepTasks2_.doUntil(currentTime);
     }
     exitFlag_ = false;

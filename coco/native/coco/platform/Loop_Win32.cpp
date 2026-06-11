@@ -53,7 +53,7 @@ bool Loop_Win32::handleEvents(int wait) {
     int timeout = 0;
     {
         Time currentTime = now();
-        Time sleepTime = sleepTasks2_.getFirstTime(sleepTasks1_.getFirstTime(currentTime + wait * 1ms));
+        Time sleepTime = sleepTasks2_.nextValue(sleepTasks1_.nextValue(currentTime + wait * 1ms));
         int t = (sleepTime - currentTime).value;
         timeout = t > 0 ? t : 0;
     }
@@ -89,7 +89,7 @@ bool Loop_Win32::handleEvents(int wait) {
     // resume coroutines waiting on sleep() and activate time handlers
     {
         Time currentTime = now();
-        sleepTasks1_.doUntil(currentTime, [](TimeoutHandler &handler) {handler.onTimeout();});
+        sleepTasks1_.doUntil(currentTime);//, [](TimeoutHandler &handler) {handler.onTimeout();});
         sleepTasks2_.doUntil(currentTime);
     }
 

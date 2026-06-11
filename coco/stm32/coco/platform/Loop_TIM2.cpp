@@ -46,7 +46,7 @@ void Loop_TIM2::run() {
         // see http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dai0321a/BIHICBGB.html
         if (mode_ == Mode::WAIT) {
             // get sleep time
-            Time sleepTime = sleepTasks2_.getFirstTime(sleepTasks1_.getFirstTime(currentTime + MAX_SLEEP * 1ms));
+            Time sleepTime = sleepTasks2_.nextValue(sleepTasks1_.nextValue(currentTime + MAX_SLEEP * 1ms));
 
             // set new timeout and clear pending interrupt flags at peripheral and NVIC
             TIM2->CCR1 = sleepTime.value;
@@ -74,7 +74,7 @@ void Loop_TIM2::run() {
 
         // resume coroutines waiting on sleep()
         currentTime = now();
-        sleepTasks1_.doUntil(currentTime, [](TimeoutHandler &handler) {handler.onTimeout();});
+        sleepTasks1_.doUntil(currentTime);//, [](TimeoutHandler &handler) {handler.onTimeout();});
         sleepTasks2_.doUntil(currentTime);
     }
     exitFlag_ = false;
