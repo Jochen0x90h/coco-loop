@@ -11,7 +11,8 @@ namespace coco {
 ///
 class Loop_emu : public Loop_native {
 public:
-
+    /// @brief Constructor.
+    ///
     Loop_emu();
     ~Loop_emu() override;
 

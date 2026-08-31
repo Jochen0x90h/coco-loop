@@ -45,7 +45,7 @@ static void mouseCallback(GLFWwindow* window, int button, int action, int mods) 
 
 // Loop_emu
 
-Loop_emu::Loop_emu() {
+Loop_emu::Loop_emu() : Loop_native(true) {
     // init GLFW
     glfwSetErrorCallback(errorCallback);
     if (!glfwInit())

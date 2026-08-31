@@ -22,7 +22,9 @@ static inline int io_uring_enter(int ring_fd, unsigned to_submit, unsigned min_c
 class Loop_io_uring : public Loop {
 public:
 
-    Loop_io_uring();
+    /// @brief Constructor.
+    /// @param noWindowMessages Don't process window messages when they are handled e.g. by GLFW (has effect only on Windows)
+    Loop_io_uring(bool noWindowMessages = false);
     ~Loop_io_uring() override;
 
     // Loop methods

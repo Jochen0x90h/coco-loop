@@ -11,7 +11,7 @@ static inline int io_uring_setup(unsigned entries, struct io_uring_params *p) {
     return syscall(__NR_io_uring_setup, entries, p);
 }
 
-Loop_io_uring::Loop_io_uring() {
+Loop_io_uring::Loop_io_uring(bool) {
     io_uring_params params;
     memset(&params, 0, sizeof(params));
     //params.flags = IORING_SETUP_SQPOLL;
