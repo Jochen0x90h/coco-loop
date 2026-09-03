@@ -62,7 +62,7 @@ public:
         virtual void onCompletion() = 0;
     };
 
-    /// @brief Push a handler onto the handler queue so that the main application gets notified.
+    /// @brief Push a handler onto the handler queue so that the main application gets notified once.
     /// Useful for example for finished device operations. Can be called from the interrupt service routine of the
     /// device e.g. when a read or write operation has finished.
     void push(CompletionHandler &handler) {

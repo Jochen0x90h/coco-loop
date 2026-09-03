@@ -4,6 +4,7 @@ add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME}
     PUBLIC FILE_SET headers TYPE HEADERS FILES
         Loop.hpp
+        DevicePath.hpp
     PRIVATE
         Loop.cpp
     )

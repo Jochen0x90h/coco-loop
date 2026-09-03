@@ -1,7 +1,9 @@
 #pragma once
 
+#include <coco/DevicePath.hpp>
 #include <coco/Loop.hpp>
 #include <coco/IntrusiveSortedTaskList.hpp>
+#include <coco/IntrusiveTaskList.hpp>
 
 #include <coco/platform/WindowsDef.hpp>
 #include <Windows.h>
@@ -14,8 +16,9 @@ namespace coco {
 ///
 class Loop_Win32 : public Loop {
 public:
-
-    Loop_Win32();
+    /// @brief Constructor.
+    /// @param noWindowMessages Don't process window messages when they are handled e.g. by GLFW (has effect only on Windows)
+    Loop_Win32(bool noWindowMessages = false);
     ~Loop_Win32() override;
 
     // Loop methods
@@ -68,14 +71,38 @@ public:
         virtual void onCompletion(OVERLAPPED *overlapped) = 0;
     };
 
+
+    /// @brief Get the handle of the IO completion port.
+    /// @return The handle of the IO completion port
+    HANDLE port() {return port_;}
+
+
+    enum class DeviceType {
+        UNKNOWN,
+        USB,
+        COM
+    };
+
+    /// @brief Handler for device events.
+    /// Windows propagates device events as window messages, therefore a window is needed to receive the messages.
+    class DeviceHandler : private IntrusiveListNode {
+        friend class Loop_Win32;
+        friend class IntrusiveList<DeviceHandler>;
+    public:
+        virtual ~DeviceHandler() {}
+        virtual void onDeviceChange(DeviceType type, bool add, DevicePath path) = 0;
+    };
+
+    void addDeviceHandler(DeviceHandler &handler);
+
+
     /// @brief Handle events and wait at most the given number of milliseconds for new events
     /// @param wait maximum time to wait in milliseconds
-    bool handleEvents(int wait = std::numeric_limits<int>::max() / 2);
-
-    // io completion port
-    HANDLE port;
+    void handleEvents(int wait = std::numeric_limits<int>::max() / 2);
 
 protected:
+    bool noWindowMessages_;
+
     // frequency for QueryPerformanceCounter
     int64_t frequency_;
 
@@ -83,6 +110,13 @@ protected:
     //TimedTaskList<Callback<>> sleepTasks1_;
     IntrusiveSortedTaskList<TimeoutHandler> sleepTasks1_;
     CoroutineTimedTaskList sleepTasks2_;
+
+    // io completion port
+    HANDLE port_;
+
+    // device handlers
+    HWND window_ = nullptr;
+    IntrusiveList<DeviceHandler> deviceHandlers_;
 };
 
 } // namespace coco
