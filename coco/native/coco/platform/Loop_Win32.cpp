@@ -1,7 +1,7 @@
 #include <coco/platform/WindowsDef.hpp>
 #include <Windows.h>
 #include <Dbt.h>
-#include <initguid.h> // DEFINE_GUID needed for GUID_DEVINTERFACE_USB_DEVICE and GUID_DEVINTERFACE_COMPORT
+#include <initguid.h> // DEFINE_GUID needed for GUIDs
 #include <usbiodef.h> // GUID_DEVINTERFACE_USB_DEVICE
 #include <ntddser.h> // GUID_DEVINTERFACE_COMPORT
 #include <coco/platform/WindowsUndef.hpp>
@@ -66,20 +66,26 @@ void Loop_Win32::addDeviceHandler(DeviceHandler &handler) {
         wc.lpfnWndProc = [](HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT {
             bool add = wParam == DBT_DEVICEARRIVAL;
             if (uMsg == WM_DEVICECHANGE && (add || wParam == DBT_DEVICEREMOVECOMPLETE)) {
-                PDEV_BROADCAST_HDR pHdr = (PDEV_BROADCAST_HDR)lParam;
-                if (pHdr->dbch_devicetype == DBT_DEVTYP_DEVICEINTERFACE) {
-                    PDEV_BROADCAST_DEVICEINTERFACE_W pDevInf = (PDEV_BROADCAST_DEVICEINTERFACE_W)pHdr;
+                PDEV_BROADCAST_HDR hdr = (PDEV_BROADCAST_HDR)lParam;
+                if (hdr->dbch_devicetype == DBT_DEVTYP_DEVICEINTERFACE) {
+                    PDEV_BROADCAST_DEVICEINTERFACE_W devInterface = (PDEV_BROADCAST_DEVICEINTERFACE_W)hdr;
 
                     // get device type
                     DeviceType type = DeviceType::UNKNOWN;
-                    if (IsEqualGUID(pDevInf->dbcc_classguid, GUID_DEVINTERFACE_COMPORT))
+                    if (IsEqualGUID(devInterface->dbcc_classguid, GUID_DEVINTERFACE_COMPORT))
                         type = DeviceType::COM;
-                    else if (IsEqualGUID(pDevInf->dbcc_classguid, GUID_DEVINTERFACE_USB_DEVICE))
+                    else if (IsEqualGUID(devInterface->dbcc_classguid, GUID_DEVINTERFACE_USB_DEVICE))
                         type = DeviceType::USB;
 
                     // call handlers
                     auto &list = *reinterpret_cast<IntrusiveList<DeviceHandler> *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-                    DevicePath path(pDevInf->dbcc_name);
+
+                    // convert path to lower case to be compatible to SetupApi
+                    std::wstring lowerPath(devInterface->dbcc_name);
+                    std::transform(lowerPath.begin(), lowerPath.end(), lowerPath.begin(), ::towlower);
+
+                    DevicePath path(lowerPath.c_str());
+
                     for (auto &handler : list) {
                         handler.onDeviceChange(type, add, path);
                     }
