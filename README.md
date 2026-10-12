@@ -3,7 +3,7 @@
 Event Loop for CoCo that waits for events
 
 ## Import
-Add coco-loop/\<version> to your conanfile where version corresponds to the git tags
+Add coco-loop/\<version> to your conanfile where version corresponds to a git tag.
 
 ## Features
 * Event loop, can be instantiated multiple times in separate threads on Windows/MacOS/Linux
