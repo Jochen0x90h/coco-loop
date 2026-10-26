@@ -33,17 +33,7 @@ public:
     [[nodiscard]] Awaitable<CoroutineTimedTask> sleep(Time time) override;
     using Loop::sleep;
 
-/*
-    void invoke(TimedTask<Callback> &task, Time time) {
-        task.cancelAndSet(time);
-        this->sleepTasks1_.add(task);
-    }
 
-    void invoke(TimedTask<Callback> &task, Duration duration = {}) {
-        task.cancelAndSet(now() + duration);
-        this->sleepTasks1_.add(task);
-    }
-*/
     /// @brief Timeout handler.
     ///
     class TimeoutHandler : private IntrusiveListNode {
@@ -228,6 +218,31 @@ public:
             .opcode = IORING_OP_POLL_ADD,
             .fd = fd,
             .poll_events = __u16(events),
+            .user_data = uint64_t(&handler) | id};
+        sq_.array[index] = index;
+
+        // increment tail to make submission visible
+        __atomic_store_n(sq_.tail, tail + 1, __ATOMIC_RELEASE);
+
+        // submit
+        int result = io_uring_enter(ring_, 1, 0, 0);
+        assert(result == 1 && "io_uring enter");
+        return true;
+    }
+
+    bool accept(CompletionHandler &handler, int fd, void *endpoint, socklen_t *endpointSize, int id = 0) {
+        uint32_t tail = __atomic_load_n(sq_.tail, __ATOMIC_RELAXED);
+        uint32_t head = __atomic_load_n(sq_.head, __ATOMIC_ACQUIRE);
+        if ((tail - head) > sq_.mask)
+            return false;
+
+        int index = tail & sq_.mask;
+        sq_.entries[index] = {
+            .opcode = IORING_OP_ACCEPT,
+            .fd = fd,
+            .addr2 = reinterpret_cast<uint64_t>(endpointSize),
+            .addr = reinterpret_cast<uint64_t>(endpoint),
+            .accept_flags = 0,
             .user_data = uint64_t(&handler) | id};
         sq_.array[index] = index;
 
